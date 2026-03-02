@@ -1,0 +1,206 @@
+# Voice-Enabled Logistics Assistant Backend
+
+FastAPI backend with JWT auth, role-based logistics workflows, SQLite persistence, and voice input/output.
+
+## Tech Stack
+
+- Python 3.11+
+- FastAPI
+- SQLite (SQLAlchemy ORM)
+- JWT Authentication (`python-jose`)
+- Password hashing (`passlib[bcrypt]`)
+- SpeechRecognition (voice input)
+- pyttsx3 (offline English output)
+- gTTS (Tamil output)
+
+## Project Structure
+
+```
+backend/
+├── main.py
+├── database.py
+├── models.py
+├── schemas.py
+├── auth.py
+├── voice.py
+├── routes/
+│   ├── admin.py
+│   ├── warehouse.py
+│   └── delivery.py
+└── requirements.txt
+```
+
+## Install Dependencies
+
+```bash
+cd backend
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS/Linux
+# source .venv/bin/activate
+
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## Run Server
+
+```bash
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Open docs:
+
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- ReDoc: `http://127.0.0.1:8000/redoc`
+
+## Authentication Flow
+
+### 1) Register users
+
+```bash
+curl -X POST http://127.0.0.1:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Admin One",
+    "email":"admin@example.com",
+    "password":"admin123",
+    "role":"admin"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Warehouse One",
+    "email":"warehouse@example.com",
+    "password":"warehouse123",
+    "role":"warehouse"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Delivery One",
+    "email":"delivery@example.com",
+    "password":"delivery123",
+    "role":"delivery"
+  }'
+```
+
+### 2) Login and get JWT
+
+```bash
+curl -X POST http://127.0.0.1:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"admin123"}'
+```
+
+Copy `access_token` and pass in header:
+
+```bash
+-H "Authorization: Bearer <TOKEN>"
+```
+
+## Admin Routes
+
+### Add product
+
+```bash
+curl -X POST http://127.0.0.1:8000/admin/add-product \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" \
+  -d '{
+    "order_id":"ORD-101",
+    "product_name":"Medical Kit",
+    "destination":"Chennai",
+    "warehouse_assigned":"Warehouse One",
+    "delivery_person_assigned":"Delivery One"
+  }'
+```
+
+### Get all products
+
+```bash
+curl -X GET http://127.0.0.1:8000/admin/all-products \
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
+
+## Warehouse Routes
+
+### Pending assigned orders
+
+```bash
+curl -X GET http://127.0.0.1:8000/warehouse/pending \
+  -H "Authorization: Bearer <WAREHOUSE_TOKEN>"
+```
+
+### Mark packed
+
+```bash
+curl -X PUT http://127.0.0.1:8000/warehouse/mark-packed/ORD-101 \
+  -H "Authorization: Bearer <WAREHOUSE_TOKEN>"
+```
+
+## Delivery Routes
+
+### Get my assigned orders
+
+```bash
+curl -X GET http://127.0.0.1:8000/delivery/my-orders \
+  -H "Authorization: Bearer <DELIVERY_TOKEN>"
+```
+
+### Mark delivered
+
+```bash
+curl -X PUT http://127.0.0.1:8000/delivery/mark-delivered/ORD-101 \
+  -H "Authorization: Bearer <DELIVERY_TOKEN>"
+```
+
+## Voice Endpoints
+
+### Capture mic input
+
+```bash
+curl -X POST http://127.0.0.1:8000/voice/listen
+```
+
+### Process voice command (authenticated)
+
+```bash
+curl -X POST http://127.0.0.1:8000/voice/process \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <DELIVERY_TOKEN>" \
+  -d '{"command":"What is my next delivery"}'
+```
+
+### Speak text manually
+
+```bash
+curl -X POST http://127.0.0.1:8000/voice/speak \
+  -H "Content-Type: application/json" \
+  -d '{"command":"New delivery assigned. Order ID 101. Deliver to Chennai."}'
+```
+
+## Sample Voice Commands
+
+- `What is my next delivery`
+- `Mark order 123 delivered`
+- `Show pending orders`
+- `Track order 456`
+- `புதிய ஆர்டர் என்ன?` (Tamil-style query)
+
+## Tamil Voice Example
+
+Use Tamil output via `speak_text("Puthiya order assign pannapattathu. Order ID 101. Chennai ku deliver pannavum.", language="ta")`.
+
+## Notes
+
+- `pyaudio` installation may require OS-specific build tools.
+- For production, move secrets to environment variables and lock CORS origins.
