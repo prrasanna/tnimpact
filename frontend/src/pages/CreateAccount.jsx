@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { roleToRoute, saveUser, setCurrentUser } from "../utils/auth";
+import { saveUser } from "../utils/auth";
 
 // Account creation with role selection.
 function CreateAccount() {
@@ -24,9 +24,11 @@ function CreateAccount() {
     event.preventDefault();
 
     saveUser(formData);
-    setCurrentUser(formData.email);
-    toast.success("Account created successfully");
-    navigate(roleToRoute[formData.role]);
+    toast.success("Account Created Successfully");
+
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   return (
