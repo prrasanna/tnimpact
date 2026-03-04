@@ -101,7 +101,9 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
       <section className="mb-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-3xl font-bold text-white">Delivery Dashboard</h2>
+            <h2 className="text-3xl font-bold text-white">
+              Delivery Dashboard
+            </h2>
             <p className="mt-0.5 text-slate-300">
               Welcome back, {userName}. You have {pendingCount} pending tasks.
             </p>
@@ -120,7 +122,9 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
             <p className="text-xs uppercase tracking-wide text-slate-400">
               {dynamicStats[0]?.label || deliveryStats[0].label}
             </p>
-            <p className="mt-1 text-4xl font-bold text-white">{dynamicStats[0]?.value ?? 0}</p>
+            <p className="mt-1 text-4xl font-bold text-white">
+              {dynamicStats[0]?.value ?? 0}
+            </p>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -135,7 +139,9 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
             <p className="text-xs uppercase tracking-wide text-slate-400">
               {dynamicStats[1]?.label || deliveryStats[1].label}
             </p>
-            <p className="mt-1 text-4xl font-bold text-white">{dynamicStats[1]?.value ?? 0}</p>
+            <p className="mt-1 text-4xl font-bold text-white">
+              {dynamicStats[1]?.value ?? 0}
+            </p>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -150,7 +156,9 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
             <p className="text-xs uppercase tracking-wide text-slate-400">
               {dynamicStats[2]?.label || deliveryStats[2].label}
             </p>
-            <p className="mt-1 text-4xl font-bold text-white">{dynamicStats[2]?.value ?? 0}</p>
+            <p className="mt-1 text-4xl font-bold text-white">
+              {dynamicStats[2]?.value ?? 0}
+            </p>
           </div>
         </div>
       </section>
@@ -193,14 +201,13 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
           </thead>
           <tbody>
             {deliveries.map((delivery) => (
-              <tr
-                key={delivery.orderId}
-                className="border-t border-slate-800"
-              >
+              <tr key={delivery.orderId} className="border-t border-slate-800">
                 <td className="px-4 py-3 font-semibold text-cyan-300">
                   {delivery.orderId}
                 </td>
-                <td className="px-4 py-3 text-slate-200">{delivery.destination}</td>
+                <td className="px-4 py-3 text-slate-200">
+                  {delivery.destination}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${

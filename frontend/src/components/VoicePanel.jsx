@@ -222,7 +222,9 @@ function VoicePanel({
       <div className="mb-3 grid gap-3 lg:grid-cols-[1.4fr_auto_1.4fr]">
         <div className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 text-slate-300">
           <p className="text-sm font-medium">Assistant online</p>
-          <p className="mt-1 text-xs text-slate-400">Speech recognition ready</p>
+          <p className="mt-1 text-xs text-slate-400">
+            Speech recognition ready
+          </p>
         </div>
 
         <button
@@ -250,7 +252,9 @@ function VoicePanel({
       </div>
 
       <div className="mb-3 rounded-xl border border-slate-700 bg-slate-800 p-3 text-sm text-slate-300">
-        Heard: {transcript || (isListening ? listeningLabel : "No command captured yet.")}
+        Heard:{" "}
+        {transcript ||
+          (isListening ? listeningLabel : "No command captured yet.")}
       </div>
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">

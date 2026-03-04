@@ -1,4 +1,9 @@
-import { ClipboardList, CircleCheck, PackageSearch, Warehouse } from "lucide-react";
+import {
+  ClipboardList,
+  CircleCheck,
+  PackageSearch,
+  Warehouse,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -18,7 +23,8 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
   const getWarehouseStorageKey = (email) =>
     `vla_warehouse_data_${(email || "guest").toLowerCase()}`;
 
-  const createInitialOrders = () => warehouseOrders.map((order) => ({ ...order }));
+  const createInitialOrders = () =>
+    warehouseOrders.map((order) => ({ ...order }));
 
   const navItems = [
     { label: "Dashboard", path: "/warehouse" },
@@ -156,9 +162,12 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
       <section className="mb-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-3xl font-bold text-white">Warehouse Dashboard</h2>
+            <h2 className="text-3xl font-bold text-white">
+              Warehouse Dashboard
+            </h2>
             <p className="mt-0.5 text-slate-300">
-              Welcome back, {userName}. You have {pendingCount} pending pick tasks.
+              Welcome back, {userName}. You have {pendingCount} pending pick
+              tasks.
             </p>
             <p className="mt-1 text-sm text-slate-400">{userEmail}</p>
           </div>
@@ -175,7 +184,9 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
             <p className="text-xs uppercase tracking-wide text-slate-400">
               Total Orders
             </p>
-            <p className="mt-1 text-4xl font-bold text-white">{orders.length}</p>
+            <p className="mt-1 text-4xl font-bold text-white">
+              {orders.length}
+            </p>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -249,11 +260,10 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
           </thead>
           <tbody>
             {orders.map((order) => (
-              <tr
-                key={order.orderId}
-                className="border-t border-slate-800"
-              >
-                <td className="px-4 py-3 font-semibold text-cyan-300">{order.orderId}</td>
+              <tr key={order.orderId} className="border-t border-slate-800">
+                <td className="px-4 py-3 font-semibold text-cyan-300">
+                  {order.orderId}
+                </td>
                 <td className="px-4 py-3 text-slate-200">{order.item}</td>
                 <td className="px-4 py-3">
                   <span

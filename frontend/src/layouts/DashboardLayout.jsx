@@ -40,7 +40,9 @@ function DashboardLayout({ title, navItems, children, theme, onToggleTheme }) {
                   {initials || "U"}
                 </div>
                 <div className="leading-tight">
-                  <p className="text-sm font-semibold text-slate-100">{fullName}</p>
+                  <p className="text-sm font-semibold text-slate-100">
+                    {fullName}
+                  </p>
                   <p className="text-xs text-slate-400">{roleName}</p>
                 </div>
               </div>
