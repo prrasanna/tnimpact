@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Volume2 } from "lucide-react";
+import { AudioLines, Mic, SendHorizontal } from "lucide-react";
 
 // Reusable functional voice assistant panel UI.
 function VoicePanel({
@@ -15,6 +15,7 @@ function VoicePanel({
   const [transcript, setTranscript] = useState("");
   const [responseText, setResponseText] = useState(idleHint);
   const [manualCommand, setManualCommand] = useState("");
+  const [lastCommand, setLastCommand] = useState("");
   const [voiceLanguage, setVoiceLanguage] = useState("en-IN");
 
   useEffect(() => {
@@ -94,6 +95,8 @@ function VoicePanel({
       return;
     }
 
+    setLastCommand(command.trim());
+
     try {
       setIsProcessing(true);
       setResponseText("Processing command...");
@@ -125,12 +128,16 @@ function VoicePanel({
   };
 
   const stopListening = () => {
-    if (recognitionRef.current) {
+    if (recognitionRef.current && isListening) {
       recognitionRef.current.stop();
     }
   };
 
   const startListening = () => {
+    if (isListening) {
+      return;
+    }
+
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -178,6 +185,7 @@ function VoicePanel({
 
     recognition.onend = () => {
       setIsListening(false);
+      recognitionRef.current = null;
 
       if (pendingSpeechRef.current) {
         const speechText = pendingSpeechRef.current;
@@ -188,55 +196,73 @@ function VoicePanel({
       }
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setIsListening(false);
+      setResponseText("Microphone could not start. Please try again.");
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+      return;
+    }
+
+    startListening();
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <h3 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
-        {title}
-      </h3>
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+      {title ? (
+        <h3 className="mb-4 text-lg font-semibold text-white">{title}</h3>
+      ) : null}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-3 grid gap-3 lg:grid-cols-[1.4fr_auto_1.4fr]">
+        <div className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 text-slate-300">
+          <p className="text-sm font-medium">Assistant online</p>
+          <p className="mt-1 text-xs text-slate-400">Speech recognition ready</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={toggleListening}
+          disabled={isProcessing}
+          className={`inline-flex h-12 w-12 items-center justify-center rounded-xl text-white transition ${
+            isListening
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-emerald-500 hover:bg-emerald-600"
+          } disabled:cursor-not-allowed disabled:opacity-50`}
+          aria-label={isListening ? "Stop recording" : "Start recording"}
+        >
+          <Mic size={18} />
+        </button>
+
+        <div className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 text-slate-300">
+          <p className="text-xs font-semibold uppercase text-cyan-300">
+            Last command
+          </p>
+          <p className="mt-1 text-sm text-slate-100">
+            {lastCommand ? `“${lastCommand}”` : "No command yet."}
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-3 rounded-xl border border-slate-700 bg-slate-800 p-3 text-sm text-slate-300">
+        Heard: {transcript || (isListening ? listeningLabel : "No command captured yet.")}
+      </div>
+
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <select
           value={voiceLanguage}
           onChange={(event) => setVoiceLanguage(event.target.value)}
-          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
+          className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200"
         >
           <option value="en-IN">English (India)</option>
           <option value="ta-IN">Tamil</option>
         </select>
 
-        <button
-          type="button"
-          onClick={startListening}
-          disabled={isListening || isProcessing}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
-        >
-          {isListening ? <Mic size={16} /> : <MicOff size={16} />}
-          {isListening ? listeningLabel : "Start Listening"}
-        </button>
-
-        <button
-          type="button"
-          onClick={stopListening}
-          disabled={!isListening}
-          className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-rose-300"
-        >
-          Stop
-        </button>
-
-        <div className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-          <Volume2 size={16} />
-          Auto voice response enabled
-        </div>
-      </div>
-
-      <div className="mb-3 rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-        Heard: {transcript || "No command captured yet."}
-      </div>
-
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <input
           value={manualCommand}
           onChange={(event) => setManualCommand(event.target.value)}
@@ -248,7 +274,7 @@ function VoicePanel({
             }
           }}
           placeholder="Type command manually (e.g., Track order ORD-1001)"
-          className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
+          className="flex-1 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
         />
         <button
           type="button"
@@ -257,14 +283,18 @@ function VoicePanel({
             processCommand(manualCommand, "manual");
             setManualCommand("");
           }}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
+          <SendHorizontal size={14} />
           {isProcessing ? "Running..." : "Run Command"}
         </button>
       </div>
 
-      <div className="min-h-20 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-        Response: {responseText}
+      <div className="min-h-20 rounded-xl border border-slate-700 bg-slate-800 p-3 text-sm text-slate-200">
+        <p className="mb-1 inline-flex items-center gap-2 text-cyan-300">
+          <AudioLines size={14} /> ASSISTANT RESPONSE
+        </p>
+        <p>{responseText}</p>
       </div>
     </div>
   );
