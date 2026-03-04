@@ -1,6 +1,5 @@
 import { NavLink } from "react-router-dom";
 
-// Sidebar used by role-based dashboards.
 function Sidebar({ title, items }) {
   return (
     <aside className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 lg:w-64">
@@ -8,9 +7,9 @@ function Sidebar({ title, items }) {
         {title}
       </h2>
       <nav className="space-y-2">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <NavLink
-            key={item.path}
+            key={`${item.path}-${index}`}   // ✅ fixed
             to={item.path}
             className={({ isActive }) =>
               `block rounded-xl px-3 py-2 text-sm font-medium transition ${
