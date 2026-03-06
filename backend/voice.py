@@ -10,10 +10,8 @@ from contextlib import suppress
 import pyttsx3
 import speech_recognition as sr
 from gtts import gTTS
-from sqlalchemy.orm import Session
 
-import models
-from database import SessionLocal
+from database import get_database
 
 logger = logging.getLogger(__name__)
 
@@ -94,27 +92,30 @@ def _extract_order_id(command: str) -> str | None:
     return raw if raw.startswith("ORD") else f"ORD-{raw}"
 
 
-def process_voice_command(command: str, user_role: str, user_name: str | None = None) -> str:
+async def process_voice_command(command: str, user_role: str, user_name: str | None = None) -> str:
     """Parse a voice command, query/update DB, and speak a response."""
     normalized = command.lower().strip()
     is_tamil = bool(re.search(r"[\u0B80-\u0BFF]", command))
     language = "ta" if is_tamil else "en"
 
-    db: Session = SessionLocal()
+    db = get_database()
+    
     try:
         if "what is my next delivery" in normalized and user_role == "delivery":
-            query = db.query(models.Product).filter(
-                models.Product.delivery_person_assigned == (user_name or ""),
-                models.Product.status.in_(["packed", "out_for_delivery"]),
+            next_order = await db.products.find_one(
+                {
+                    "delivery_person_assigned": user_name or "",
+                    "status": {"$in": ["packed", "out_for_delivery"]}
+                },
+                sort=[("created_at", 1)]
             )
-            next_order = query.order_by(models.Product.created_at.asc()).first()
 
             if not next_order:
                 response = "You do not have any pending deliveries."
             else:
                 response = (
-                    f"Your next delivery is {next_order.order_id} to "
-                    f"{next_order.destination}."
+                    f"Your next delivery is {next_order['order_id']} to "
+                    f"{next_order['destination']}."
                 )
 
             speak_text(response, language=language)
@@ -127,20 +128,22 @@ def process_voice_command(command: str, user_role: str, user_name: str | None = 
                 speak_text(response, language=language)
                 return response
 
-            order = db.query(models.Product).filter(models.Product.order_id == order_id).first()
+            order = await db.products.find_one({"order_id": order_id})
             if not order:
                 response = f"Order {order_id} was not found."
                 speak_text(response, language=language)
                 return response
 
-            order.status = "delivered"
-            db.commit()
+            await db.products.update_one(
+                {"order_id": order_id},
+                {"$set": {"status": "delivered"}}
+            )
             response = f"Order {order_id} marked as delivered."
             speak_text(response, language=language)
             return response
 
         if "show pending orders" in normalized:
-            pending_orders = db.query(models.Product).filter(models.Product.status == "created").all()
+            pending_orders = await db.products.find({"status": "created"}).to_list(length=1000)
             if not pending_orders:
                 response = "There are no pending orders right now."
             else:
@@ -156,13 +159,13 @@ def process_voice_command(command: str, user_role: str, user_name: str | None = 
                 speak_text(response, language=language)
                 return response
 
-            order = db.query(models.Product).filter(models.Product.order_id == order_id).first()
+            order = await db.products.find_one({"order_id": order_id})
             if not order:
                 response = f"Order {order_id} not found."
             else:
                 response = (
-                    f"Order {order_id} is currently {order.status} and will go to "
-                    f"{order.destination}."
+                    f"Order {order_id} is currently {order['status']} and will go to "
+                    f"{order['destination']}."
                 )
 
             speak_text(response, language=language)
@@ -171,5 +174,8 @@ def process_voice_command(command: str, user_role: str, user_name: str | None = 
         response = "Sorry, I could not map that command to a workflow."
         speak_text(response, language=language)
         return response
-    finally:
-        db.close()
+    except Exception as exc:
+        logger.error("Voice command processing failed: %s", exc)
+        response = "An error occurred while processing your command."
+        speak_text(response, language=language)
+        return response

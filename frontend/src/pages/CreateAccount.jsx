@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { saveUser } from "../utils/auth";
+import { registerUser } from "../utils/auth";
 
 // Account creation with role selection.
 function CreateAccount() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -20,15 +21,21 @@ function CreateAccount() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setLoading(true);
 
-    saveUser(formData);
-    toast.success("Account Created Successfully");
-
-    setTimeout(() => {
-      navigate("/login");
-    }, 1000);
+    try {
+      await registerUser(formData);
+      toast.success("Account created successfully! Please login.");
+      
+      setTimeout(() => {
+        navigate("/login");
+      }, 1000);
+    } catch (error) {
+      toast.error(error.message || "Failed to create account");
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,7 +56,8 @@ function CreateAccount() {
           name="name"
           value={formData.name}
           onChange={handleChange}
-          className="mb-4 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          disabled={loading}
+          className="mb-4 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 disabled:opacity-50"
         />
 
         <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -61,7 +69,8 @@ function CreateAccount() {
           name="email"
           value={formData.email}
           onChange={handleChange}
-          className="mb-4 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          disabled={loading}
+          className="mb-4 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 disabled:opacity-50"
         />
 
         <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -73,7 +82,8 @@ function CreateAccount() {
           name="password"
           value={formData.password}
           onChange={handleChange}
-          className="mb-4 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          disabled={loading}
+          className="mb-4 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 disabled:opacity-50"
         />
 
         <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -83,7 +93,8 @@ function CreateAccount() {
           name="role"
           value={formData.role}
           onChange={handleChange}
-          className="mb-6 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          disabled={loading}
+          className="mb-6 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 disabled:opacity-50"
         >
           <option>Admin</option>
           <option>Warehouse Staff</option>
@@ -92,9 +103,10 @@ function CreateAccount() {
 
         <button
           type="submit"
-          className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-emerald-500 px-4 py-2 font-semibold text-white"
+          disabled={loading}
+          className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-emerald-500 px-4 py-2 font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Create Account
+          {loading ? "Creating..." : "Create Account"}
         </button>
 
         <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">

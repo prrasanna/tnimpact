@@ -1,35 +1,55 @@
-"""SQLAlchemy ORM models."""
+"""MongoDB document models using Pydantic."""
 
 from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel, EmailStr, Field
+from bson import ObjectId
 
-from sqlalchemy import Column, DateTime, Integer, String
 
-from database import Base
+class PyObjectId(ObjectId):
+    """Custom ObjectId type for Pydantic."""
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        if not ObjectId.is_valid(v):
+            raise ValueError("Invalid ObjectId")
+        return ObjectId(v)
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, field_schema):
+        field_schema.update(type="string")
 
 
-class User(Base):
+class User(BaseModel):
     """Application user model with role-based access."""
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    name: str = Field(..., max_length=100)
+    email: EmailStr = Field(..., unique=True)
+    password: str = Field(..., max_length=255)
+    role: str = Field(..., max_length=50)
 
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    password = Column(String(255), nullable=False)
-    role = Column(String(50), nullable=False, index=True)
+    class Config:
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+        populate_by_name = True
 
 
-class Product(Base):
+class Product(BaseModel):
     """Product/order model tracked through logistics lifecycle."""
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    order_id: str = Field(..., max_length=100, unique=True)
+    product_name: str = Field(..., max_length=255)
+    destination: str = Field(..., max_length=255)
+    warehouse_assigned: str = Field(..., max_length=255)
+    delivery_person_assigned: str = Field(..., max_length=255)
+    delivery_person_phone: str = Field(default="", max_length=50)
+    status: str = Field(default="created", max_length=50)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    __tablename__ = "products"
-
-    id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(String(100), unique=True, nullable=False, index=True)
-    product_name = Column(String(255), nullable=False)
-    destination = Column(String(255), nullable=False)
-    warehouse_assigned = Column(String(255), nullable=False)
-    delivery_person_assigned = Column(String(255), nullable=False)
-    delivery_person_phone = Column(String(50), nullable=False, default="")
-    status = Column(String(50), nullable=False, default="created", index=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    class Config:
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+        populate_by_name = True

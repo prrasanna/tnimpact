@@ -36,7 +36,7 @@ function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRole="Admin">
+            <ProtectedRoute allowedRole="admin">
               <AdminDashboard theme={theme} onToggleTheme={handleToggleTheme} />
             </ProtectedRoute>
           }
@@ -44,7 +44,7 @@ function App() {
         <Route
           path="/warehouse"
           element={
-            <ProtectedRoute allowedRole="Warehouse Staff">
+            <ProtectedRoute allowedRole="warehouse">
               <WarehouseDashboard
                 theme={theme}
                 onToggleTheme={handleToggleTheme}
@@ -55,7 +55,7 @@ function App() {
         <Route
           path="/delivery"
           element={
-            <ProtectedRoute allowedRole="Delivery Person">
+            <ProtectedRoute allowedRole="delivery">
               <DeliveryDashboard
                 theme={theme}
                 onToggleTheme={handleToggleTheme}

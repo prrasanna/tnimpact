@@ -1,9 +1,9 @@
 """Pydantic request and response schemas."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserCreate(BaseModel):
@@ -18,13 +18,13 @@ class UserCreate(BaseModel):
 class UserOut(BaseModel):
     """Schema returned for user data."""
 
-    id: int
+    id: Optional[str] = Field(default=None, alias="_id")
     name: str
     email: EmailStr
     role: str
 
     class Config:
-        from_attributes = True
+        populate_by_name = True
 
 
 class LoginRequest(BaseModel):
@@ -55,7 +55,7 @@ class ProductCreate(BaseModel):
 class ProductOut(BaseModel):
     """Schema returned for product entries."""
 
-    id: int
+    id: Optional[str] = Field(default=None, alias="_id")
     order_id: str
     product_name: str
     destination: str
@@ -66,7 +66,7 @@ class ProductOut(BaseModel):
     created_at: datetime
 
     class Config:
-        from_attributes = True
+        populate_by_name = True
 
 
 class VoiceCommandRequest(BaseModel):

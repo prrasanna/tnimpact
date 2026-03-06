@@ -1,12 +1,12 @@
 # Voice-Enabled Logistics Assistant Backend
 
-FastAPI backend with JWT auth, role-based logistics workflows, SQLite persistence, and voice input/output.
+FastAPI backend with JWT auth, role-based logistics workflows, MongoDB persistence, and voice input/output.
 
 ## Tech Stack
 
 - Python 3.11+
 - FastAPI
-- SQLite (SQLAlchemy ORM)
+- MongoDB (Motor async driver)
 - JWT Authentication (`python-jose`)
 - Password hashing (`passlib[bcrypt]`)
 - SpeechRecognition (voice input)
@@ -27,10 +27,17 @@ backend/
 │   ├── admin.py
 │   ├── warehouse.py
 │   └── delivery.py
-└── requirements.txt
+├── requirements.txt
+├── .env
+├── .env.example
+├── MONGODB_SETUP.md
+├── CONNECTION_STRINGS.md
+└── test_mongodb.py
 ```
 
-## Install Dependencies
+## Quick Start
+
+### 1. Install Dependencies
 
 ```bash
 cd backend
@@ -44,10 +51,47 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Run Server
+### 2. Setup MongoDB
+
+**Option A: MongoDB Atlas (Cloud - Recommended)**
+1. Create free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)
+2. Create a cluster
+3. Get connection string
+
+**Option B: Local MongoDB**
+1. Install MongoDB Community Server
+2. Start MongoDB service
+3. Use connection string: `mongodb://localhost:27017`
+
+See [MONGODB_SETUP.md](MONGODB_SETUP.md) for detailed instructions.
+
+### 3. Configure Environment Variables
+
+Copy `.env.example` to `.env` and update with your MongoDB connection string:
+
+```env
+MONGODB_URL=mongodb://localhost:27017
+# OR for MongoDB Atlas:
+# MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/
+
+DATABASE_NAME=voice_logistics
+
+SECRET_KEY=your-secret-key-here-change-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+### 4. Test MongoDB Connection
 
 ```bash
-cd backend
+python test_mongodb.py
+```
+
+You should see: `✅ Successfully connected to MongoDB!`
+
+### 5. Run Server
+
+```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 

@@ -6,12 +6,10 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import inspect, text
 
-import models
 import schemas
 from auth import get_current_user, router as auth_router
-from database import Base, engine
+from database import connect_to_mongodb, close_mongodb_connection
 from routes.admin import router as admin_router
 from routes.delivery import router as delivery_router
 from routes.warehouse import router as warehouse_router
@@ -26,26 +24,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Voice-Enabled Logistics Assistant API", version="1.0.0")
 
-
-def _ensure_schema_updates() -> None:
-    """Apply lightweight schema updates for existing SQLite databases."""
-    inspector = inspect(engine)
-    if "products" not in inspector.get_table_names():
-        return
-
-    columns = {column["name"] for column in inspector.get_columns("products")}
-    if "delivery_person_phone" in columns:
-        return
-
-    with engine.begin() as connection:
-        connection.execute(
-            text(
-                "ALTER TABLE products "
-                "ADD COLUMN delivery_person_phone VARCHAR(50) NOT NULL DEFAULT ''"
-            )
-        )
-    logger.info("Applied schema update: added products.delivery_person_phone")
-
 # CORS policy (adjust origins in production).
 app.add_middleware(
     CORSMiddleware,
@@ -57,11 +35,17 @@ app.add_middleware(
 
 
 @app.on_event("startup")
-def on_startup():
-    """Create tables on startup if not present."""
-    Base.metadata.create_all(bind=engine)
-    _ensure_schema_updates()
-    logger.info("Database tables initialized")
+async def on_startup():
+    """Connect to MongoDB on startup."""
+    await connect_to_mongodb()
+    logger.info("Application startup complete")
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    """Close MongoDB connection on shutdown."""
+    await close_mongodb_connection()
+    logger.info("Application shutdown complete")
 
 
 @app.exception_handler(HTTPException)
@@ -99,15 +83,15 @@ def capture_voice_command():
 
 
 @app.post("/voice/process")
-def handle_voice_command(
+async def handle_voice_command(
     payload: schemas.VoiceCommandRequest,
-    current_user: models.User = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ):
     """Process text command with role-aware voice workflow."""
-    response = process_voice_command(
+    response = await process_voice_command(
         command=payload.command,
-        user_role=current_user.role,
-        user_name=current_user.name,
+        user_role=current_user["role"],
+        user_name=current_user["name"],
     )
     return {"response": response}
 

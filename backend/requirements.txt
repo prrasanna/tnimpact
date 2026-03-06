@@ -1,11 +1,14 @@
 fastapi
 uvicorn
-sqlalchemy
-passlib[bcrypt]
+motor
+pymongo
+bcrypt
 python-jose
 SpeechRecognition
 pyaudio
 pyttsx3
 gTTS
 pydantic
+pydantic-settings
 email-validator
+python-dotenv
