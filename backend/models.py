@@ -30,5 +30,6 @@ class Product(Base):
     destination = Column(String(255), nullable=False)
     warehouse_assigned = Column(String(255), nullable=False)
     delivery_person_assigned = Column(String(255), nullable=False)
+    delivery_person_phone = Column(String(50), nullable=False, default="")
     status = Column(String(50), nullable=False, default="created", index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

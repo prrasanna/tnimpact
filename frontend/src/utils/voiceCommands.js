@@ -188,8 +188,8 @@ const handleGeneralTopic = (text) => {
     ])
   ) {
     return bilingual(
-      "வணக்கம்! நான் ரெடி, என்ன உதவி வேண்டும் சொல்லுங்க.",
-      "Hello! I’m ready, tell me how I can help.",
+      `வணக்கம்! ${user_name} நான் ரெடி, என்ன உதவி வேண்டும் சொல்லுங்க.`,
+      `Hello! ${user_name} I’m ready, tell me how I can help.`,
     );
   }
 
@@ -288,7 +288,7 @@ export const processDeliveryVoiceCommand = ({
     }
 
     return bilingual(
-      `சரி. Order ${orderId} successful-ஆ delivered ஆகிடுச்சு. Safe-ஆ drive பண்ணுங்க.`,
+      `சரி. Order ${orderId} successful-ஆ delivered ஆகிடுச்சு.  பாதுகாப்பு-ஆ drive பண்ணுங்க.`,
       `Okay. Order ${orderId} has been successfully delivered. Drive safely.`,
     );
   }
@@ -437,7 +437,7 @@ export const processWarehouseVoiceCommand = ({
 
     onMarkPacked(orderId, { fromVoice: true });
     return bilingual(
-      `சரி. Order ${orderId} successful-ஆ packed ஆகிடுச்சு. வேற ஏதாவது உதவி வேண்டுமா?`,
+      `சரி. Order ${orderId} வெற்றிகரமாக-ஆ packed ஆகிடுச்சு. வேற ஏதாவது உதவி வேண்டுமா?`,
       `Okay. Order ${orderId} has been successfully marked as packed. Do you need anything else?`,
     );
   }

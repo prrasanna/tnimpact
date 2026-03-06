@@ -49,6 +49,7 @@ class ProductCreate(BaseModel):
     destination: str
     warehouse_assigned: str
     delivery_person_assigned: str
+    delivery_person_phone: str
 
 
 class ProductOut(BaseModel):
@@ -60,6 +61,7 @@ class ProductOut(BaseModel):
     destination: str
     warehouse_assigned: str
     delivery_person_assigned: str
+    delivery_person_phone: str
     status: str
     created_at: datetime
 
@@ -71,3 +73,18 @@ class VoiceCommandRequest(BaseModel):
     """Schema for processing free-form voice commands."""
 
     command: str
+
+
+class AdminStatsOut(BaseModel):
+    """Summary stats for admin dashboard."""
+
+    total_orders: int
+    pending_deliveries: int
+    active_drivers: int
+
+
+class AdminDashboardOut(BaseModel):
+    """Database-backed payload for admin dashboard."""
+
+    stats: AdminStatsOut
+    products: list[ProductOut]

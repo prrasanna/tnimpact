@@ -19,12 +19,26 @@ import {
 function WarehouseDashboard({ theme, onToggleTheme }) {
   const hasAnnouncedRef = useRef(false);
   const currentUser = getCurrentUser();
+  const warehouseOrderTemplateByOrderId = useMemo(
+    () =>
+      warehouseOrders.reduce((accumulator, order) => {
+        accumulator[order.orderId] = order;
+        return accumulator;
+      }, {}),
+    [],
+  );
 
   const getWarehouseStorageKey = (email) =>
     `vla_warehouse_data_${(email || "guest").toLowerCase()}`;
 
   const createInitialOrders = () =>
     warehouseOrders.map((order) => ({ ...order }));
+
+  const normalizeOrders = (items) =>
+    items.map((order) => {
+      const template = warehouseOrderTemplateByOrderId[order.orderId] || {};
+      return { ...template, ...order };
+    });
 
   const navItems = [
     { label: "Dashboard", path: "/warehouse" },
@@ -43,7 +57,9 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
 
     try {
       const parsed = JSON.parse(savedOrders);
-      return Array.isArray(parsed) ? parsed : createInitialOrders();
+      return Array.isArray(parsed)
+        ? normalizeOrders(parsed)
+        : createInitialOrders();
     } catch {
       return createInitialOrders();
     }
@@ -251,6 +267,12 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
                 Item
               </th>
               <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
+                Delivery Person Name
+              </th>
+              <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
+                Delivery Person Phone Number
+              </th>
+              <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
                 Status
               </th>
               <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
@@ -265,6 +287,12 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
                   {order.orderId}
                 </td>
                 <td className="px-4 py-3 text-slate-200">{order.item}</td>
+                <td className="px-4 py-3 text-slate-200">
+                  {order.deliveryPersonName || "—"}
+                </td>
+                <td className="px-4 py-3 text-slate-200">
+                  {order.deliveryPersonPhone || "—"}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${

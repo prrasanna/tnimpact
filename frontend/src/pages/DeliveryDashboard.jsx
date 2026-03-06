@@ -10,12 +10,26 @@ import { processDeliveryVoiceCommand } from "../utils/voiceCommands";
 // Delivery dashboard with status tracking and fake voice panel.
 function DeliveryDashboard({ theme, onToggleTheme }) {
   const currentUser = getCurrentUser();
+  const deliveryTemplateByOrderId = useMemo(
+    () =>
+      deliveryList.reduce((accumulator, delivery) => {
+        accumulator[delivery.orderId] = delivery;
+        return accumulator;
+      }, {}),
+    [],
+  );
 
   const getDeliveryStorageKey = (email) =>
     `vla_delivery_data_${(email || "guest").toLowerCase()}`;
 
   const createInitialDeliveries = () =>
     deliveryList.map((delivery) => ({ ...delivery }));
+
+  const normalizeDeliveries = (items) =>
+    items.map((delivery) => {
+      const template = deliveryTemplateByOrderId[delivery.orderId] || {};
+      return { ...template, ...delivery };
+    });
 
   const navItems = [
     { label: "Dashboard", path: "/delivery" },
@@ -34,7 +48,9 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
 
     try {
       const parsed = JSON.parse(savedDeliveries);
-      return Array.isArray(parsed) ? parsed : createInitialDeliveries();
+      return Array.isArray(parsed)
+        ? normalizeDeliveries(parsed)
+        : createInitialDeliveries();
     } catch {
       return createInitialDeliveries();
     }
@@ -189,7 +205,13 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
                 Order ID
               </th>
               <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
+                Item Name
+              </th>
+              <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
                 Destination
+              </th>
+              <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
+                Customer Phone
               </th>
               <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
                 Status
@@ -206,7 +228,13 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
                   {delivery.orderId}
                 </td>
                 <td className="px-4 py-3 text-slate-200">
+                  {delivery.itemName || "—"}
+                </td>
+                <td className="px-4 py-3 text-slate-200">
                   {delivery.destination}
+                </td>
+                <td className="px-4 py-3 text-slate-200">
+                  {delivery.customerPhone || "—"}
                 </td>
                 <td className="px-4 py-3">
                   <span

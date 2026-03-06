@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import inspect, text
 
 import models
 import schemas
@@ -25,6 +26,26 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Voice-Enabled Logistics Assistant API", version="1.0.0")
 
+
+def _ensure_schema_updates() -> None:
+    """Apply lightweight schema updates for existing SQLite databases."""
+    inspector = inspect(engine)
+    if "products" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("products")}
+    if "delivery_person_phone" in columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "ALTER TABLE products "
+                "ADD COLUMN delivery_person_phone VARCHAR(50) NOT NULL DEFAULT ''"
+            )
+        )
+    logger.info("Applied schema update: added products.delivery_person_phone")
+
 # CORS policy (adjust origins in production).
 app.add_middleware(
     CORSMiddleware,
@@ -39,6 +60,7 @@ app.add_middleware(
 def on_startup():
     """Create tables on startup if not present."""
     Base.metadata.create_all(bind=engine)
+    _ensure_schema_updates()
     logger.info("Database tables initialized")
 
 
