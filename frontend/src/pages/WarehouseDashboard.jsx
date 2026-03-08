@@ -209,7 +209,9 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
                 <td className="px-4 py-3 font-semibold text-cyan-300">
                   {order.order_id}
                 </td>
-                <td className="px-4 py-3 text-slate-200">{order.product_name}</td>
+                <td className="px-4 py-3 text-slate-200">
+                  {order.product_name}
+                </td>
                 <td className="px-4 py-3 text-slate-200">
                   {order.delivery_person_assigned || "-"}
                 </td>

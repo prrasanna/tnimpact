@@ -12,7 +12,8 @@ const toTitleStatus = (status) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
-const isPendingDelivery = (status) => ["packed", "out_for_delivery"].includes(status);
+const isPendingDelivery = (status) =>
+  ["packed", "out_for_delivery"].includes(status);
 
 // Delivery dashboard powered by backend delivery endpoints.
 function DeliveryDashboard({ theme, onToggleTheme }) {
@@ -49,8 +50,8 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
     const completed = deliveries.filter(
       (delivery) => delivery.status === "delivered",
     ).length;
-    const pending = deliveries.filter(
-      (delivery) => isPendingDelivery(delivery.status),
+    const pending = deliveries.filter((delivery) =>
+      isPendingDelivery(delivery.status),
     ).length;
 
     return [
