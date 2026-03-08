@@ -4,41 +4,22 @@ import {
   PackageSearch,
   Warehouse,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import DashboardLayout from "../layouts/DashboardLayout";
 import VoicePanel from "../components/VoicePanel";
-import { warehouseOrders } from "../data/mockData";
 import { getCurrentUser } from "../utils/auth";
-import {
-  getWarehouseAutoAnnouncement,
-  processWarehouseVoiceCommand,
-} from "../utils/voiceCommands";
+import { voiceAPI, warehouseAPI } from "../utils/api";
 
-// Warehouse dashboard with pick list flow.
+const toTitleStatus = (status) =>
+  (status || "")
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+// Warehouse dashboard powered by backend warehouse endpoints.
 function WarehouseDashboard({ theme, onToggleTheme }) {
-  const hasAnnouncedRef = useRef(false);
   const currentUser = getCurrentUser();
-  const warehouseOrderTemplateByOrderId = useMemo(
-    () =>
-      warehouseOrders.reduce((accumulator, order) => {
-        accumulator[order.orderId] = order;
-        return accumulator;
-      }, {}),
-    [],
-  );
-
-  const getWarehouseStorageKey = (email) =>
-    `vla_warehouse_data_${(email || "guest").toLowerCase()}`;
-
-  const createInitialOrders = () =>
-    warehouseOrders.map((order) => ({ ...order }));
-
-  const normalizeOrders = (items) =>
-    items.map((order) => {
-      const template = warehouseOrderTemplateByOrderId[order.orderId] || {};
-      return { ...template, ...order };
-    });
 
   const navItems = [
     { label: "Dashboard", path: "/warehouse" },
@@ -47,122 +28,64 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
     { label: "Settings", path: "/warehouse" },
   ];
 
-  const [orders, setOrders] = useState(() => {
-    const storageKey = getWarehouseStorageKey(currentUser?.email);
-    const savedOrders = localStorage.getItem(storageKey);
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-    if (!savedOrders) {
-      return createInitialOrders();
-    }
-
+  const loadOrders = useCallback(async () => {
     try {
-      const parsed = JSON.parse(savedOrders);
-      return Array.isArray(parsed)
-        ? normalizeOrders(parsed)
-        : createInitialOrders();
-    } catch {
-      return createInitialOrders();
+      setIsLoading(true);
+      const data = await warehouseAPI.getPendingProducts();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (error) {
+      toast.error(error.message || "Unable to load warehouse orders");
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }, []);
 
   useEffect(() => {
-    const storageKey = getWarehouseStorageKey(currentUser?.email);
-    localStorage.setItem(storageKey, JSON.stringify(orders));
-  }, [currentUser?.email, orders]);
+    loadOrders();
+  }, [loadOrders]);
 
   const pendingCount = useMemo(
-    () => orders.filter((order) => order.status === "Pending Pick").length,
+    () => orders.filter((order) => order.status === "created").length,
     [orders],
   );
 
   const packedCount = useMemo(
-    () => orders.filter((order) => order.status === "Packed").length,
+    () => orders.filter((order) => order.status === "packed").length,
     [orders],
   );
 
-  const markAsPacked = (orderId, options = {}) => {
+  const markAsPacked = async (orderId, options = {}) => {
     const { fromVoice = false } = options;
-
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.orderId === orderId ? { ...order, status: "Packed" } : order,
-      ),
-    );
-
-    if (fromVoice) {
-      toast.success(`Voice: order ${orderId} marked packed`);
-    } else {
-      toast.success(`Order ${orderId} marked as packed`);
-    }
-  };
-
-  const handleVoiceCommand = (command) => {
-    return processWarehouseVoiceCommand({
-      command,
-      orders,
-      onMarkPacked: markAsPacked,
-    });
-  };
-
-  useEffect(() => {
-    if (hasAnnouncedRef.current) {
-      return;
-    }
-
-    const announcement = getWarehouseAutoAnnouncement(orders);
-    toast.success("Warehouse voice assistant is ready");
-
-    if (!window.speechSynthesis) {
-      hasAnnouncedRef.current = true;
-      return;
-    }
-
-    const voices = window.speechSynthesis.getVoices();
-    const pickVoice = (lang) => {
-      const exact = voices.find(
-        (voice) => voice.lang?.toLowerCase() === lang.toLowerCase(),
-      );
-      if (exact) {
-        return exact;
+    try {
+      await warehouseAPI.markPacked(orderId);
+      await loadOrders();
+      if (fromVoice) {
+        toast.success(`Voice: order ${orderId} marked packed`);
+      } else {
+        toast.success(`Order ${orderId} marked as packed`);
       }
+    } catch (error) {
+      toast.error(error.message || `Failed to mark ${orderId} as packed`);
+    }
+  };
 
-      const base = lang.split("-")[0].toLowerCase();
-      return voices.find((voice) => voice.lang?.toLowerCase().startsWith(base));
-    };
+  const handleVoiceCommand = async (command) => {
+    const result = await voiceAPI.processCommand({
+      command,
+      user_role: currentUser?.role || "warehouse",
+      user_name: currentUser?.name || "",
+    });
 
-    const [taLine, enLine] = announcement
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (!taLine || !enLine) {
-      hasAnnouncedRef.current = true;
-      return;
+    if (result.action_performed) {
+      await loadOrders();
     }
 
-    window.speechSynthesis.cancel();
-
-    const taUtterance = new SpeechSynthesisUtterance(taLine);
-    taUtterance.lang = "ta-IN";
-    const taVoice = pickVoice("ta-IN");
-    if (taVoice) {
-      taUtterance.voice = taVoice;
-    }
-
-    const enUtterance = new SpeechSynthesisUtterance(enLine);
-    enUtterance.lang = "en-IN";
-    const enVoice = pickVoice("en-IN");
-    if (enVoice) {
-      enUtterance.voice = enVoice;
-    }
-
-    taUtterance.onend = () => {
-      window.speechSynthesis.speak(enUtterance);
-    };
-
-    window.speechSynthesis.speak(taUtterance);
-    hasAnnouncedRef.current = true;
-  }, [orders]);
+    return result.response;
+  };
 
   const userName = currentUser?.name || "Warehouse User";
   const userEmail = currentUser?.email || "";
@@ -282,33 +205,33 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
           </thead>
           <tbody>
             {orders.map((order) => (
-              <tr key={order.orderId} className="border-t border-slate-800">
+              <tr key={order.order_id} className="border-t border-slate-800">
                 <td className="px-4 py-3 font-semibold text-cyan-300">
-                  {order.orderId}
+                  {order.order_id}
                 </td>
-                <td className="px-4 py-3 text-slate-200">{order.item}</td>
+                <td className="px-4 py-3 text-slate-200">{order.product_name}</td>
                 <td className="px-4 py-3 text-slate-200">
-                  {order.deliveryPersonName || "—"}
+                  {order.delivery_person_assigned || "-"}
                 </td>
                 <td className="px-4 py-3 text-slate-200">
-                  {order.deliveryPersonPhone || "—"}
+                  {order.delivery_person_phone || "-"}
                 </td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                      order.status === "Packed"
+                      order.status === "packed"
                         ? "bg-emerald-500/20 text-emerald-300"
                         : "bg-amber-500/20 text-amber-300"
                     }`}
                   >
-                    {order.status}
+                    {toTitleStatus(order.status)}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <button
                     type="button"
-                    disabled={order.status === "Packed"}
-                    onClick={() => markAsPacked(order.orderId)}
+                    disabled={order.status !== "created" || isLoading}
+                    onClick={() => markAsPacked(order.order_id)}
                     className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Mark as Packed

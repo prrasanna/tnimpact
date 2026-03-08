@@ -31,6 +31,10 @@ async def _create_product(payload: schemas.ProductCreate) -> dict:
         "delivery_person_phone": payload.delivery_person_phone,
         "status": "created",
         "created_at": datetime.utcnow(),
+        "packed_at": None,
+        "delivered_at": None,
+        "delivery_notes": payload.delivery_notes,
+        "special_instructions": payload.special_instructions,
     }
 
     result = await db.products.insert_one(product_data)

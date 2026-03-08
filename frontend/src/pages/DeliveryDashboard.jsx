@@ -1,35 +1,22 @@
 import { ClipboardList, Clock3, CircleCheck, Truck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import DashboardLayout from "../layouts/DashboardLayout";
 import VoicePanel from "../components/VoicePanel";
-import { deliveryList, deliveryStats } from "../data/mockData";
 import { getCurrentUser } from "../utils/auth";
-import { processDeliveryVoiceCommand } from "../utils/voiceCommands";
+import { deliveryAPI, voiceAPI } from "../utils/api";
 
-// Delivery dashboard with status tracking and fake voice panel.
+const toTitleStatus = (status) =>
+  (status || "")
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const isPendingDelivery = (status) => ["packed", "out_for_delivery"].includes(status);
+
+// Delivery dashboard powered by backend delivery endpoints.
 function DeliveryDashboard({ theme, onToggleTheme }) {
   const currentUser = getCurrentUser();
-  const deliveryTemplateByOrderId = useMemo(
-    () =>
-      deliveryList.reduce((accumulator, delivery) => {
-        accumulator[delivery.orderId] = delivery;
-        return accumulator;
-      }, {}),
-    [],
-  );
-
-  const getDeliveryStorageKey = (email) =>
-    `vla_delivery_data_${(email || "guest").toLowerCase()}`;
-
-  const createInitialDeliveries = () =>
-    deliveryList.map((delivery) => ({ ...delivery }));
-
-  const normalizeDeliveries = (items) =>
-    items.map((delivery) => {
-      const template = deliveryTemplateByOrderId[delivery.orderId] || {};
-      return { ...template, ...delivery };
-    });
 
   const navItems = [
     { label: "Dashboard", path: "/delivery" },
@@ -38,68 +25,68 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
     { label: "Settings", path: "/delivery" },
   ];
 
-  const [deliveries, setDeliveries] = useState(() => {
-    const storageKey = getDeliveryStorageKey(currentUser?.email);
-    const savedDeliveries = localStorage.getItem(storageKey);
+  const [deliveries, setDeliveries] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-    if (!savedDeliveries) {
-      return createInitialDeliveries();
-    }
-
+  const loadDeliveries = useCallback(async () => {
     try {
-      const parsed = JSON.parse(savedDeliveries);
-      return Array.isArray(parsed)
-        ? normalizeDeliveries(parsed)
-        : createInitialDeliveries();
-    } catch {
-      return createInitialDeliveries();
+      setIsLoading(true);
+      const data = await deliveryAPI.getMyOrders();
+      setDeliveries(Array.isArray(data) ? data : []);
+    } catch (error) {
+      toast.error(error.message || "Unable to load delivery orders");
+      setDeliveries([]);
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }, []);
 
   useEffect(() => {
-    const storageKey = getDeliveryStorageKey(currentUser?.email);
-    localStorage.setItem(storageKey, JSON.stringify(deliveries));
-  }, [currentUser?.email, deliveries]);
+    loadDeliveries();
+  }, [loadDeliveries]);
 
   const dynamicStats = useMemo(() => {
     const completed = deliveries.filter(
-      (delivery) => delivery.status === "Completed",
+      (delivery) => delivery.status === "delivered",
     ).length;
     const pending = deliveries.filter(
-      (delivery) => delivery.status === "Pending",
+      (delivery) => isPendingDelivery(delivery.status),
     ).length;
 
     return [
-      { ...deliveryStats[0], value: deliveries.length },
-      { ...deliveryStats[1], value: completed },
-      { ...deliveryStats[2], value: pending },
+      { label: "Today's Deliveries", value: deliveries.length },
+      { label: "Completed", value: completed },
+      { label: "Pending", value: pending },
     ];
   }, [deliveries]);
 
-  const markAsDelivered = (orderId, options = {}) => {
+  const markAsDelivered = async (orderId, options = {}) => {
     const { fromVoice = false } = options;
-
-    setDeliveries((prev) =>
-      prev.map((delivery) =>
-        delivery.orderId === orderId
-          ? { ...delivery, status: "Completed" }
-          : delivery,
-      ),
-    );
-
-    if (fromVoice) {
-      toast.success(`Voice: order ${orderId} marked delivered`);
-    } else {
-      toast.success(`Order ${orderId} marked as delivered`);
+    try {
+      await deliveryAPI.markDelivered(orderId);
+      await loadDeliveries();
+      if (fromVoice) {
+        toast.success(`Voice: order ${orderId} marked delivered`);
+      } else {
+        toast.success(`Order ${orderId} marked as delivered`);
+      }
+    } catch (error) {
+      toast.error(error.message || `Failed to mark ${orderId} as delivered`);
     }
   };
 
-  const handleVoiceCommand = (command) => {
-    return processDeliveryVoiceCommand({
+  const handleVoiceCommand = async (command) => {
+    const result = await voiceAPI.processCommand({
       command,
-      deliveries,
-      onMarkDelivered: markAsDelivered,
+      user_role: currentUser?.role || "delivery",
+      user_name: currentUser?.name || "",
     });
+
+    if (result.action_performed) {
+      await loadDeliveries();
+    }
+
+    return result.response;
   };
 
   const pendingCount = dynamicStats[2]?.value ?? 0;
@@ -136,7 +123,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
               <ClipboardList size={16} />
             </div>
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              {dynamicStats[0]?.label || deliveryStats[0].label}
+              {dynamicStats[0]?.label || "Today's Deliveries"}
             </p>
             <p className="mt-1 text-4xl font-bold text-white">
               {dynamicStats[0]?.value ?? 0}
@@ -153,7 +140,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
               </span>
             </div>
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              {dynamicStats[1]?.label || deliveryStats[1].label}
+              {dynamicStats[1]?.label || "Completed"}
             </p>
             <p className="mt-1 text-4xl font-bold text-white">
               {dynamicStats[1]?.value ?? 0}
@@ -170,7 +157,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
               </span>
             </div>
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              {dynamicStats[2]?.label || deliveryStats[2].label}
+              {dynamicStats[2]?.label || "Pending"}
             </p>
             <p className="mt-1 text-4xl font-bold text-white">
               {dynamicStats[2]?.value ?? 0}
@@ -223,35 +210,35 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
           </thead>
           <tbody>
             {deliveries.map((delivery) => (
-              <tr key={delivery.orderId} className="border-t border-slate-800">
+              <tr key={delivery.order_id} className="border-t border-slate-800">
                 <td className="px-4 py-3 font-semibold text-cyan-300">
-                  {delivery.orderId}
+                  {delivery.order_id}
                 </td>
                 <td className="px-4 py-3 text-slate-200">
-                  {delivery.itemName || "—"}
+                  {delivery.product_name || "-"}
                 </td>
                 <td className="px-4 py-3 text-slate-200">
-                  {delivery.destination}
+                  {delivery.destination || "-"}
                 </td>
                 <td className="px-4 py-3 text-slate-200">
-                  {delivery.customerPhone || "—"}
+                  {delivery.delivery_person_phone || "-"}
                 </td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                      delivery.status === "Completed"
+                      delivery.status === "delivered"
                         ? "bg-emerald-500/20 text-emerald-300"
                         : "bg-amber-500/20 text-amber-300"
                     }`}
                   >
-                    {delivery.status === "Completed" ? "Delivered" : "Pending"}
+                    {toTitleStatus(delivery.status)}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <button
                     type="button"
-                    disabled={delivery.status === "Completed"}
-                    onClick={() => markAsDelivered(delivery.orderId)}
+                    disabled={!isPendingDelivery(delivery.status) || isLoading}
+                    onClick={() => markAsDelivered(delivery.order_id)}
                     className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Truck size={14} />

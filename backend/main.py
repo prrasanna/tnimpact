@@ -82,22 +82,31 @@ def capture_voice_command():
     return {"command": command}
 
 
-@app.post("/voice/process")
+@app.post("/voice/command", response_model=schemas.VoiceCommandResponse)
 async def handle_voice_command(
     payload: schemas.VoiceCommandRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """Process text command with role-aware voice workflow."""
-    response = await process_voice_command(
+    """Unified voice endpoint that executes backend command workflows."""
+    # Always trust authenticated user identity for secure role-aware actions.
+    return await process_voice_command(
         command=payload.command,
         user_role=current_user["role"],
         user_name=current_user["name"],
     )
-    return {"response": response}
+
+
+@app.post("/voice/process", response_model=schemas.VoiceCommandResponse)
+async def handle_voice_command_legacy(
+    payload: schemas.VoiceCommandRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Backward-compatible alias for legacy frontend integrations."""
+    return await handle_voice_command(payload=payload, current_user=current_user)
 
 
 @app.post("/voice/speak")
-def speak(payload: schemas.VoiceCommandRequest):
+def speak(payload: schemas.SpeakRequest):
     """Manually speak any provided text."""
     speak_text(payload.command, language="en")
     return {"status": "spoken"}

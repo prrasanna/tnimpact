@@ -1,6 +1,8 @@
 """Delivery routes for assigned deliveries."""
 
 import logging
+import re
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -19,8 +21,39 @@ async def get_my_orders(
 ):
     """Get orders assigned to logged-in delivery person."""
     db = get_database()
+
+    user_name = (current_user.get("name") or "").strip()
+    user_email = (current_user.get("email") or "").strip().lower()
+    email_local = user_email.split("@", 1)[0] if "@" in user_email else user_email
+
+    assignment_filters = []
+    if user_name:
+        assignment_filters.append(
+            {
+                "delivery_person_assigned": {
+                    "$regex": f"^{re.escape(user_name)}$",
+                    "$options": "i",
+                }
+            }
+        )
+
+    if email_local:
+        readable_local = re.sub(r"[._-]+", " ", email_local).strip()
+        if readable_local:
+            assignment_filters.append(
+                {
+                    "delivery_person_assigned": {
+                        "$regex": f"^{re.escape(readable_local)}$",
+                        "$options": "i",
+                    }
+                }
+            )
+
+    if not assignment_filters:
+        return []
+
     products = await db.products.find({
-        "delivery_person_assigned": current_user["name"]
+        "$or": assignment_filters
     }).sort("created_at", 1).to_list(length=1000)
     
     # Convert ObjectId to string
@@ -44,10 +77,21 @@ async def mark_order_delivered(
     if product["status"] == "delivered":
         raise HTTPException(status_code=400, detail="Order already delivered")
 
+    if product["status"] not in {"packed", "out_for_delivery"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot mark delivered from status {product['status']}",
+        )
+
     # Update status
     await db.products.update_one(
         {"order_id": order_id},
-        {"$set": {"status": "delivered"}}
+        {
+            "$set": {
+                "status": "delivered",
+                "delivered_at": datetime.utcnow(),
+            }
+        }
     )
     
     # Fetch updated product

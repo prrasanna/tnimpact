@@ -96,9 +96,21 @@ export const deliveryAPI = {
   },
 };
 
+// Unified voice API calls
+export const voiceAPI = {
+  // Process command in backend with role and user context
+  processCommand: async ({ command, user_role, user_name }) => {
+    return apiRequest('/voice/command', {
+      method: 'POST',
+      body: JSON.stringify({ command, user_role, user_name }),
+    });
+  },
+};
+
 export default {
   auth: authAPI,
   admin: adminAPI,
   warehouse: warehouseAPI,
   delivery: deliveryAPI,
+  voice: voiceAPI,
 };

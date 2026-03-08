@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import tempfile
+from datetime import datetime
 from contextlib import suppress
 
 import pyttsx3
@@ -92,90 +93,169 @@ def _extract_order_id(command: str) -> str | None:
     return raw if raw.startswith("ORD") else f"ORD-{raw}"
 
 
-async def process_voice_command(command: str, user_role: str, user_name: str | None = None) -> str:
-    """Parse a voice command, query/update DB, and speak a response."""
+def _intent_from_text(normalized_command: str) -> str:
+    """Map free-form command text to supported backend intents."""
+    if "track order" in normalized_command or "status" in normalized_command:
+        return "track_order"
+
+    if "mark" in normalized_command and "packed" in normalized_command:
+        return "mark_packed"
+
+    if "mark" in normalized_command and "delivered" in normalized_command:
+        return "mark_delivered"
+
+    if "pending" in normalized_command:
+        return "show_pending_orders"
+
+    return "unknown"
+
+
+async def _save_voice_log(
+    user_name: str,
+    role: str,
+    command_text: str,
+    response: str,
+) -> None:
+    """Persist voice command audit logs."""
+    db = get_database()
+    await db.voice_logs.insert_one(
+        {
+            "user_name": user_name,
+            "role": role,
+            "command_text": command_text,
+            "response": response,
+            "timestamp": datetime.utcnow(),
+        }
+    )
+
+
+async def process_voice_command(
+    command: str,
+    user_role: str,
+    user_name: str | None = None,
+) -> dict:
+    """Parse a voice command, execute DB actions, and return structured response."""
     normalized = command.lower().strip()
-    is_tamil = bool(re.search(r"[\u0B80-\u0BFF]", command))
-    language = "ta" if is_tamil else "en"
+    intent = _intent_from_text(normalized)
+    actor_name = user_name or "Unknown"
 
     db = get_database()
+    order_id = _extract_order_id(command)
+    action_performed = False
     
     try:
-        if "what is my next delivery" in normalized and user_role == "delivery":
-            next_order = await db.products.find_one(
-                {
-                    "delivery_person_assigned": user_name or "",
-                    "status": {"$in": ["packed", "out_for_delivery"]}
-                },
-                sort=[("created_at", 1)]
-            )
-
-            if not next_order:
-                response = "You do not have any pending deliveries."
-            else:
-                response = (
-                    f"Your next delivery is {next_order['order_id']} to "
-                    f"{next_order['destination']}."
-                )
-
-            speak_text(response, language=language)
-            return response
-
-        if "mark order" in normalized and "delivered" in normalized:
-            order_id = _extract_order_id(command)
+        if intent == "track_order":
             if not order_id:
                 response = "I could not find an order ID in your command."
-                speak_text(response, language=language)
-                return response
+            else:
+                order = await db.products.find_one({"order_id": order_id})
+                if not order:
+                    response = f"Order {order_id} was not found."
+                else:
+                    response = (
+                        f"Order {order_id} is currently {order['status']} and is headed to "
+                        f"{order['destination']}."
+                    )
 
-            order = await db.products.find_one({"order_id": order_id})
-            if not order:
-                response = f"Order {order_id} was not found."
-                speak_text(response, language=language)
-                return response
+        elif intent == "mark_packed":
+            if user_role not in {"warehouse", "admin"}:
+                response = "Only warehouse or admin users can mark orders as packed."
+            elif not order_id:
+                response = "I could not find an order ID in your command."
+            else:
+                order = await db.products.find_one({"order_id": order_id})
+                if not order:
+                    response = f"Order {order_id} was not found."
+                elif order["status"] != "created":
+                    response = f"Order {order_id} cannot be packed from status {order['status']}."
+                else:
+                    update_result = await db.products.update_one(
+                        {"order_id": order_id},
+                        {
+                            "$set": {
+                                "status": "packed",
+                                "packed_at": datetime.utcnow(),
+                            }
+                        },
+                    )
+                    action_performed = bool(update_result.modified_count)
+                    response = (
+                        f"Order {order_id} marked as packed."
+                        if action_performed
+                        else f"No update applied for order {order_id}."
+                    )
 
-            await db.products.update_one(
-                {"order_id": order_id},
-                {"$set": {"status": "delivered"}}
-            )
-            response = f"Order {order_id} marked as delivered."
-            speak_text(response, language=language)
-            return response
+        elif intent == "mark_delivered":
+            if user_role not in {"delivery", "admin"}:
+                response = "Only delivery or admin users can mark orders as delivered."
+            elif not order_id:
+                response = "I could not find an order ID in your command."
+            else:
+                order = await db.products.find_one({"order_id": order_id})
+                if not order:
+                    response = f"Order {order_id} was not found."
+                elif order["status"] not in {"packed", "out_for_delivery"}:
+                    response = f"Order {order_id} cannot be delivered from status {order['status']}."
+                else:
+                    update_result = await db.products.update_one(
+                        {"order_id": order_id},
+                        {
+                            "$set": {
+                                "status": "delivered",
+                                "delivered_at": datetime.utcnow(),
+                            }
+                        },
+                    )
+                    action_performed = bool(update_result.modified_count)
+                    response = (
+                        f"Order {order_id} marked as delivered."
+                        if action_performed
+                        else f"No update applied for order {order_id}."
+                    )
 
-        if "show pending orders" in normalized:
-            pending_orders = await db.products.find({"status": "created"}).to_list(length=1000)
+        elif intent == "show_pending_orders":
+            filters = {"status": "created"}
+            if user_role == "warehouse":
+                filters["warehouse_assigned"] = actor_name
+            elif user_role == "delivery":
+                filters["delivery_person_assigned"] = actor_name
+                filters["status"] = {"$in": ["packed", "out_for_delivery"]}
+
+            pending_orders = await db.products.find(filters).to_list(length=1000)
             if not pending_orders:
                 response = "There are no pending orders right now."
             else:
                 response = f"There are {len(pending_orders)} pending orders."
 
-            speak_text(response, language=language)
-            return response
+        else:
+            response = "Sorry, I could not map that command to a supported workflow."
 
-        if "track order" in normalized:
-            order_id = _extract_order_id(command)
-            if not order_id:
-                response = "I could not find an order ID in your command."
-                speak_text(response, language=language)
-                return response
+        await _save_voice_log(
+            user_name=actor_name,
+            role=user_role,
+            command_text=command,
+            response=response,
+        )
 
-            order = await db.products.find_one({"order_id": order_id})
-            if not order:
-                response = f"Order {order_id} not found."
-            else:
-                response = (
-                    f"Order {order_id} is currently {order['status']} and will go to "
-                    f"{order['destination']}."
-                )
-
-            speak_text(response, language=language)
-            return response
-
-        response = "Sorry, I could not map that command to a workflow."
-        speak_text(response, language=language)
-        return response
+        return {
+            "response": response,
+            "intent": intent,
+            "action_performed": action_performed,
+            "order_id": order_id,
+        }
     except Exception as exc:
         logger.error("Voice command processing failed: %s", exc)
         response = "An error occurred while processing your command."
-        speak_text(response, language=language)
-        return response
+        with suppress(Exception):
+            await _save_voice_log(
+                user_name=actor_name,
+                role=user_role,
+                command_text=command,
+                response=response,
+            )
+        return {
+            "response": response,
+            "intent": intent,
+            "action_performed": False,
+            "order_id": order_id,
+        }

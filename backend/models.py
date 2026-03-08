@@ -48,6 +48,10 @@ class Product(BaseModel):
     delivery_person_phone: str = Field(default="", max_length=50)
     status: str = Field(default="created", max_length=50)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    packed_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    delivery_notes: str = Field(default="", max_length=500)
+    special_instructions: str = Field(default="", max_length=500)
 
     class Config:
         arbitrary_types_allowed = True

@@ -50,6 +50,8 @@ class ProductCreate(BaseModel):
     warehouse_assigned: str
     delivery_person_assigned: str
     delivery_person_phone: str
+    special_instructions: str = ""
+    delivery_notes: str = ""
 
 
 class ProductOut(BaseModel):
@@ -62,8 +64,20 @@ class ProductOut(BaseModel):
     warehouse_assigned: str
     delivery_person_assigned: str
     delivery_person_phone: str
-    status: str
+    status: Literal[
+        "created",
+        "packed",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+        "returned",
+        "failed",
+    ]
     created_at: datetime
+    packed_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    delivery_notes: str = ""
+    special_instructions: str = ""
 
     class Config:
         populate_by_name = True
@@ -71,6 +85,23 @@ class ProductOut(BaseModel):
 
 class VoiceCommandRequest(BaseModel):
     """Schema for processing free-form voice commands."""
+
+    command: str
+    user_role: Literal["admin", "warehouse", "delivery"]
+    user_name: str
+
+
+class VoiceCommandResponse(BaseModel):
+    """Schema returned for unified voice command processing."""
+
+    response: str
+    intent: str
+    action_performed: bool
+    order_id: Optional[str] = None
+
+
+class SpeakRequest(BaseModel):
+    """Schema for simple text-to-speech endpoint."""
 
     command: str
 
