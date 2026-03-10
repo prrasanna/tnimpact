@@ -1,4 +1,4 @@
-"""Voice input/output and command processing utilities."""
+"""Voice input/output and command  processing utilities."""
 
 import logging
 import os
@@ -12,6 +12,7 @@ import pyttsx3
 import speech_recognition as sr
 from gtts import gTTS
 
+from context_manager import get_context_manager
 from database import get_database
 
 logger = logging.getLogger(__name__)
@@ -134,13 +135,24 @@ async def process_voice_command(
     user_role: str,
     user_name: str | None = None,
 ) -> dict:
-    """Parse a voice command, execute DB actions, and return structured response."""
-    normalized = command.lower().strip()
-    intent = _intent_from_text(normalized)
+    """Parse a voice command, execute DB actions, and return structured response.
+    
+    Phase 2 Enhancement: Now includes context-aware command resolution.
+    """
     actor_name = user_name or "Unknown"
+    
+    # Phase 2: Get context manager and retrieve user context
+    ctx_manager = get_context_manager()
+    user_context = ctx_manager.get_context(actor_name)
+    
+    # Phase 2: Resolve anaphoric references (it, that, the customer, etc.)
+    resolved_command = ctx_manager.resolve_anaphora(command, user_context)
+    
+    normalized = resolved_command.lower().strip()
+    intent = _intent_from_text(normalized)
 
     db = get_database()
-    order_id = _extract_order_id(command)
+    order_id = _extract_order_id(resolved_command)
     action_performed = False
     
     try:
@@ -156,6 +168,12 @@ async def process_voice_command(
                         f"Order {order_id} is currently {order['status']} and is headed to "
                         f"{order['destination']}."
                     )
+                    # Phase 2: Save order context
+                    ctx_manager.update_context(actor_name, {
+                        "last_order_id": order_id,
+                        "last_location": order.get("destination"),
+                        "last_customer_phone": order.get("delivery_person_phone"),
+                    })
 
         elif intent == "mark_packed":
             if user_role not in {"warehouse", "admin"}:

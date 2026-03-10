@@ -77,12 +77,12 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
   };
 
   const handleVoiceCommand = async (command) => {
+    // Phase 2: Backend now gets user info from JWT token
     const result = await voiceAPI.processCommand({
       command,
-      user_role: currentUser?.role || "delivery",
-      user_name: currentUser?.name || "",
     });
 
+    // Reload deliveries if action was performed (order marked delivered, etc.)
     if (result.action_performed) {
       await loadDeliveries();
     }

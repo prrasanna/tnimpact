@@ -100,12 +100,40 @@ export const deliveryAPI = {
 
 // Unified voice API calls
 export const voiceAPI = {
-  // Process command in backend with role and user context
-  processCommand: async ({ command, user_role, user_name }) => {
+  // Process command in backend (Phase 2: user info from JWT token)
+  processCommand: async ({ command }) => {
     return apiRequest("/voice/command", {
       method: "POST",
-      body: JSON.stringify({ command, user_role, user_name }),
+      body: JSON.stringify({ command }),
     });
+  },
+};
+
+// Phase 2: Context Management API
+export const contextAPI = {
+  // Get user's conversation context
+  getContext: async (userId) => {
+    return apiRequest(`/context/${encodeURIComponent(userId)}`);
+  },
+
+  // Update user's conversation context
+  updateContext: async (userId, updates) => {
+    return apiRequest(`/context/${encodeURIComponent(userId)}`, {
+      method: "POST",
+      body: JSON.stringify(updates),
+    });
+  },
+
+  // Clear user's conversation context
+  clearContext: async (userId) => {
+    return apiRequest(`/context/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Get context summary
+  getContextSummary: async (userId) => {
+    return apiRequest(`/context/${encodeURIComponent(userId)}/summary`);
   },
 };
 
@@ -115,4 +143,5 @@ export default {
   warehouse: warehouseAPI,
   delivery: deliveryAPI,
   voice: voiceAPI,
+  context: contextAPI,
 };

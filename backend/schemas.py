@@ -84,11 +84,13 @@ class ProductOut(BaseModel):
 
 
 class VoiceCommandRequest(BaseModel):
-    """Schema for processing free-form voice commands."""
+    """Schema for processing free-form voice commands.
+    
+    Note: user_role and user_name are now obtained from JWT token,
+    not from the request body.
+    """
 
     command: str
-    user_role: Literal["admin", "warehouse", "delivery"]
-    user_name: str
 
 
 class VoiceCommandResponse(BaseModel):

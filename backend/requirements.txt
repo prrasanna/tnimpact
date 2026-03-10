@@ -12,3 +12,10 @@ pydantic
 pydantic-settings
 email-validator
 python-dotenv
+
+# Phase 2 Voice Features
+redis>=5.0.0
+vosk>=0.3.45
+# webrtcvad>=2.0.10  # Optional - requires C++ build tools on Windows. Not needed for browser-based VAD.
+numpy>=1.24.0
+soundfile>=0.12.0

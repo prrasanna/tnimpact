@@ -74,12 +74,12 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
   };
 
   const handleVoiceCommand = async (command) => {
+    // Phase 2: Backend now gets user info from JWT token
     const result = await voiceAPI.processCommand({
       command,
-      user_role: currentUser?.role || "warehouse",
-      user_name: currentUser?.name || "",
     });
 
+    // Reload orders if action was performed (order marked packed, etc.)
     if (result.action_performed) {
       await loadOrders();
     }

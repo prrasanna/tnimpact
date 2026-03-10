@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 import schemas
 from auth import get_current_user, router as auth_router
+from context_manager import get_context_manager
 from database import connect_to_mongodb, close_mongodb_connection
 from routes.admin import router as admin_router
 from routes.delivery import router as delivery_router
@@ -110,6 +111,86 @@ def speak(payload: schemas.SpeakRequest):
     """Manually speak any provided text."""
     speak_text(payload.command, language="en")
     return {"status": "spoken"}
+
+
+# Phase 2: Context Management Endpoints
+@app.get("/context/{user_id}")
+async def get_user_context(
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Retrieve conversation context for a user."""
+    # Only allow users to access their own context or admins to access any
+    if current_user["name"] != user_id and current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    ctx_manager = get_context_manager()
+    context = ctx_manager.get_context(user_id)
+    
+    return {
+        "user_id": user_id,
+        "context": context,
+        "redis_available": ctx_manager.is_available(),
+    }
+
+
+@app.post("/context/{user_id}")
+async def update_user_context(
+    user_id: str,
+    updates: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Update conversation context for a user."""
+    # Only allow users to update their own context or admins to update any
+    if current_user["name"] != user_id and current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    ctx_manager = get_context_manager()
+    success = ctx_manager.update_context(user_id, updates)
+    
+    return {
+        "user_id": user_id,
+        "updated": success,
+        "context": ctx_manager.get_context(user_id),
+    }
+
+
+@app.delete("/context/{user_id}")
+async def clear_user_context(
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Clear all conversation context for a user."""
+    # Only allow users to clear their own context or admins to clear any
+    if current_user["name"] != user_id and current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    ctx_manager = get_context_manager()
+    success = ctx_manager.clear_context(user_id)
+    
+    return {
+        "user_id": user_id,
+        "cleared": success,
+    }
+
+
+@app.get("/context/{user_id}/summary")
+async def get_context_summary(
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Get human-readable context summary."""
+    # Only allow users to access their own context or admins to access any
+    if current_user["name"] != user_id and current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    ctx_manager = get_context_manager()
+    summary = ctx_manager.get_context_summary(user_id)
+    
+    return {
+        "user_id": user_id,
+        "summary": summary,
+    }
 
 
 # Register API routers.

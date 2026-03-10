@@ -57,6 +57,9 @@ export const loginUser = async (email, password) => {
     // Store user info
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     
+    // Store user_id separately for easy access (email is the user ID)
+    localStorage.setItem('user_id', tokenPayload.sub);
+    
     return user;
   } catch (error) {
     console.error('Login error:', error);
@@ -90,4 +93,5 @@ export const isAuthenticated = () => {
 export const logoutUser = () => {
   localStorage.removeItem(CURRENT_USER_KEY);
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('user_id');
 };
