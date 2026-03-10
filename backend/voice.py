@@ -94,18 +94,61 @@ def _extract_order_id(command: str) -> str | None:
     return raw if raw.startswith("ORD") else f"ORD-{raw}"
 
 
+def _extract_location(command: str) -> str | None:
+    """Extract location/city from voice command."""
+    # Pattern: "update location to Chennai" or "location to Mumbai"
+    match = re.search(r"(?:location to|headed to|destination to)\s+(\w+)", command, flags=re.IGNORECASE)
+    if match:
+        return match.group(1).title()
+    
+    # Pattern: "Chennai" at the end
+    words = command.strip().split()
+    if len(words) > 0:
+        # Return last capitalized word that's likely a city name
+        potential_city = words[-1].title()
+        if len(potential_city) > 2:
+            return potential_city
+    
+    return None
+
+
 def _intent_from_text(normalized_command: str) -> str:
-    """Map free-form command text to supported backend intents."""
-    if "track order" in normalized_command or "status" in normalized_command:
+    """Map free-form command text to supported backend intents.
+    
+    Phase 2: Enhanced patterns for context-aware commands.
+    """
+    # Track order queries
+    if "track order" in normalized_command or "track it" in normalized_command:
         return "track_order"
-
-    if "mark" in normalized_command and "packed" in normalized_command:
-        return "mark_packed"
-
-    if "mark" in normalized_command and "delivered" in normalized_command:
-        return "mark_delivered"
-
-    if "pending" in normalized_command:
+    
+    if "show order" in normalized_command or "show it" in normalized_command:
+        return "track_order"
+    
+    # Status queries
+    if ("what" in normalized_command or "show" in normalized_command) and "status" in normalized_command:
+        return "track_order"
+    
+    # Mark status changes (Phase 2: support multiple statuses)
+    if "mark" in normalized_command:
+        if "packed" in normalized_command:
+            return "mark_packed"
+        elif "delivered" in normalized_command:
+            return "mark_delivered"
+        elif "transit" in normalized_command or "in transit" in normalized_command:
+            return "mark_in_transit"
+        elif "pending" in normalized_command:
+            return "mark_pending"
+    
+    # Location queries (Phase 2)
+    if ("what" in normalized_command or "where" in normalized_command) and ("location" in normalized_command or "headed" in normalized_command):
+        return "query_location"
+    
+    # Update location (Phase 2)
+    if "update" in normalized_command and "location" in normalized_command:
+        return "update_location"
+    
+    # Pending orders list
+    if "pending" in normalized_command and ("order" in normalized_command or "list" in normalized_command):
         return "show_pending_orders"
 
     return "unknown"
@@ -154,6 +197,7 @@ async def process_voice_command(
     db = get_database()
     order_id = _extract_order_id(resolved_command)
     action_performed = False
+    context_updated = False
     
     try:
         if intent == "track_order":
@@ -174,6 +218,7 @@ async def process_voice_command(
                         "last_location": order.get("destination"),
                         "last_customer_phone": order.get("delivery_person_phone"),
                     })
+                    context_updated = True
 
         elif intent == "mark_packed":
             if user_role not in {"warehouse", "admin"}:
@@ -202,6 +247,13 @@ async def process_voice_command(
                         if action_performed
                         else f"No update applied for order {order_id}."
                     )
+                    # Update context
+                    if action_performed:
+                        ctx_manager.update_context(actor_name, {
+                            "last_order_id": order_id,
+                            "last_status": "packed",
+                        })
+                        context_updated = True
 
         elif intent == "mark_delivered":
             if user_role not in {"delivery", "admin"}:
@@ -230,6 +282,13 @@ async def process_voice_command(
                         if action_performed
                         else f"No update applied for order {order_id}."
                     )
+                    # Update context
+                    if action_performed:
+                        ctx_manager.update_context(actor_name, {
+                            "last_order_id": order_id,
+                            "last_status": "delivered",
+                        })
+                        context_updated = True
 
         elif intent == "show_pending_orders":
             filters = {"status": "created"}
@@ -244,6 +303,106 @@ async def process_voice_command(
                 response = "There are no pending orders right now."
             else:
                 response = f"There are {len(pending_orders)} pending orders."
+        
+        # Phase 2: New intent handlers for context-aware commands
+        elif intent == "mark_in_transit":
+            if user_role not in {"delivery", "admin"}:
+                response = "Only delivery or admin users can mark orders as in transit."
+            elif not order_id:
+                response = "I could not find an order ID in your command. Please say 'track order <number>' first."
+            else:
+                order = await db.products.find_one({"order_id": order_id})
+                if not order:
+                    response = f"Order {order_id} was not found."
+                elif order["status"] not in {"pending", "packed"}:
+                    response = f"Order {order_id} cannot be marked in transit from status {order['status']}."
+                else:
+                    update_result = await db.products.update_one(
+                        {"order_id": order_id},
+                        {
+                            "$set": {
+                                "status": "in_transit",
+                                "in_transit_at": datetime.utcnow(),
+                            }
+                        },
+                    )
+                    action_performed = bool(update_result.modified_count)
+                    response = (
+                        f"Order {order_id} has been marked as in transit."
+                        if action_performed
+                        else f"No update applied for order {order_id}."
+                    )
+                    # Update context
+                    if action_performed:
+                        ctx_manager.update_context(actor_name, {
+                            "last_order_id": order_id,
+                            "last_status": "in_transit",
+                        })
+                        context_updated = True
+        
+        elif intent == "mark_pending":
+            if user_role not in {"warehouse", "admin"}:
+                response = "Only warehouse or admin users can mark orders as pending."
+            elif not order_id:
+                response = "I could not find an order ID in your command."
+            else:
+                order = await db.products.find_one({"order_id": order_id})
+                if not order:
+                    response = f"Order {order_id} was not found."
+                else:
+                    update_result = await db.products.update_one(
+                        {"order_id": order_id},
+                        {"$set": {"status": "pending"}},
+                    )
+                    action_performed = bool(update_result.modified_count)
+                    response = (
+                        f"Order {order_id} has been marked as pending."
+                        if action_performed
+                        else f"No update applied for order {order_id}."
+                    )
+        
+        elif intent == "query_location":
+            if not order_id:
+                response = "I could not find an order ID. Please track an order first."
+            else:
+                order = await db.products.find_one({"order_id": order_id})
+                if not order:
+                    response = f"Order {order_id} was not found."
+                else:
+                    location = order.get("destination", "unknown location")
+                    response = f"Order {order_id} is headed to {location}."
+        
+        elif intent == "update_location":
+            if user_role not in {"delivery", "admin"}:
+                response = "Only delivery or admin users can update order locations."
+            elif not order_id:
+                response = "I could not find an order ID in your command."
+            else:
+                location = _extract_location(resolved_command)
+                if not location:
+                    response = "I could not identify a location in your command. Try saying 'update location to Chennai'."
+                else:
+                    order = await db.products.find_one({"order_id": order_id})
+                    if not order:
+                        response = f"Order {order_id} was not found."
+                    else:
+                        update_result = await db.products.update_one(
+                            {"order_id": order_id},
+                            {"$set": {"destination": location}},
+                        )
+                        action_performed = bool(update_result.modified_count)
+                        response = (
+                            f"Order {order_id} location updated to {location}."
+                            if action_performed
+                            else f"No update applied for order {order_id}."
+                        )
+                        # Update context
+                        if action_performed:
+                            ctx_manager.update_context(actor_name, {
+                                "last_order_id": order_id,
+                                "last_location": location,
+                            })
+                            context_updated = True
 
         else:
             response = "Sorry, I could not map that command to a supported workflow."
@@ -260,6 +419,7 @@ async def process_voice_command(
             "intent": intent,
             "action_performed": action_performed,
             "order_id": order_id,
+            "context_updated": context_updated,
         }
     except Exception as exc:
         logger.error("Voice command processing failed: %s", exc)
@@ -276,4 +436,5 @@ async def process_voice_command(
             "intent": intent,
             "action_performed": False,
             "order_id": order_id,
+            "context_updated": False,
         }
