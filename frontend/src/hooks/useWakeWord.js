@@ -4,7 +4,7 @@ import { usePorcupine } from "@picovoice/porcupine-react";
 /**
  * Custom hook for wake word detection using Porcupine
  * Enables hands-free voice activation with "Hey Logistics" wake word
- * 
+ *
  * @param {Object} options - Configuration options
  * @param {Function} options.onWakeWordDetected - Callback when wake word is detected
  * @param {boolean} options.enabled - Whether wake word detection is enabled
@@ -51,16 +51,13 @@ export const useWakeWord = ({ onWakeWordDetected, enabled = false }) => {
 
     const initPorcupine = async () => {
       try {
-        await init(
-          accessKey,
-          {
-            // Use built-in "Hey Google" keyword temporarily
-            // In production, replace with custom "Hey Logistics" keyword file
-            // Get custom keywords from: https://console.picovoice.ai/
-            builtin: "Hey Google", // Temporary - replace with custom keyword
-            sensitivity: sensitivity,
-          },
-        );
+        await init(accessKey, {
+          // Use built-in "Hey Google" keyword temporarily
+          // In production, replace with custom "Hey Logistics" keyword file
+          // Get custom keywords from: https://console.picovoice.ai/
+          builtin: "Hey Google", // Temporary - replace with custom keyword
+          sensitivity: sensitivity,
+        });
 
         await start();
         setIsListening(true);
@@ -81,7 +78,17 @@ export const useWakeWord = ({ onWakeWordDetected, enabled = false }) => {
         setIsListening(false);
       }
     };
-  }, [enabled, accessKey, isSupported, init, start, stop, release, sensitivity, isLoaded]);
+  }, [
+    enabled,
+    accessKey,
+    isSupported,
+    init,
+    start,
+    stop,
+    release,
+    sensitivity,
+    isLoaded,
+  ]);
 
   // Handle wake word detection
   useEffect(() => {

@@ -21,8 +21,9 @@ export class NoiseFilteredAudioStream {
   async initialize() {
     try {
       // Create audio context
-      this.audioContext = new (window.AudioContext ||
-        window.webkitAudioContext)();
+      this.audioContext = new (
+        window.AudioContext || window.webkitAudioContext
+      )();
 
       // Request microphone with WebRTC constraints for noise filtering
       const constraints = {
@@ -77,8 +78,7 @@ export class NoiseFilteredAudioStream {
       this.compressorNode.release.value = 0.25; // Seconds
 
       // Create destination for processed stream
-      this.destinationNode =
-        this.audioContext.createMediaStreamDestination();
+      this.destinationNode = this.audioContext.createMediaStreamDestination();
 
       // Connect nodes: source → filter → compressor → destination
       this.sourceNode.connect(this.filterNode);

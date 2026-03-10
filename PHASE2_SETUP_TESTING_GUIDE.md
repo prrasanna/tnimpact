@@ -3,6 +3,7 @@
 ## Quick Start Guide
 
 This guide will help you set up and test the newly implemented Phase 2 voice features, including:
+
 - ✅ Context-aware voice commands
 - ✅ Redis-based conversation context management
 - ✅ Wake word detection (Porcupine)
@@ -14,6 +15,7 @@ This guide will help you set up and test the newly implemented Phase 2 voice fea
 ## Prerequisites
 
 ### System Requirements
+
 - **Node.js**: 18+ (for frontend)
 - **Python**: 3.10+ (for backend)
 - **Redis**: 5.0+ (for context management)
@@ -22,17 +24,20 @@ This guide will help you set up and test the newly implemented Phase 2 voice fea
 ### Install Redis
 
 #### Windows
+
 1. Download Redis from: https://github.com/microsoftarchive/redis/releases
 2. Extract to `C:\Redis` or any preferred location
 3. Run `redis-server.exe` from the extracted folder
 4. Keep the terminal open (Redis runs on port 6379 by default)
 
 **OR use Docker:**
+
 ```powershell
 docker run -d -p 6379:6379 --name redis redis:latest
 ```
 
 #### Linux/macOS
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get install redis-server
@@ -47,6 +52,7 @@ docker run -d -p 6379:6379 --name redis redis:latest
 ```
 
 ### Verify Redis is Running
+
 ```powershell
 # Windows/Linux/macOS
 redis-cli ping
@@ -108,6 +114,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 You should see:
+
 ```
 INFO:     Application startup complete
 INFO:     Connected to Redis at localhost:6379
@@ -162,6 +169,7 @@ npm run dev
 ```
 
 You should see:
+
 ```
   ➜  Local:   http://localhost:5173/
 ```
@@ -252,6 +260,7 @@ Write-Output "Saved Context: $($context.context | ConvertTo-Json)"
 ```
 
 **Expected Output:**
+
 ```
 Response 1: Order ORD-1003 is currently packed and is headed to 123 Main Street.
 Response 2: Order ORD-1003 marked as delivered.
@@ -295,21 +304,24 @@ Open browser console (F12) and run:
 
 ```javascript
 // Import and test noise filtering
-import NoiseFilteredAudioStream from './src/utils/audioProcessing.js';
+import NoiseFilteredAudioStream from "./src/utils/audioProcessing.js";
 
 // Check if supported
-console.log('Audio processing supported:', NoiseFilteredAudioStream.isSupported());
+console.log(
+  "Audio processing supported:",
+  NoiseFilteredAudioStream.isSupported(),
+);
 
 // Create instance
 const audioStream = new NoiseFilteredAudioStream();
 
 // Initialize
 await audioStream.initialize();
-console.log('Basic stream initialized');
+console.log("Basic stream initialized");
 
 // Get processed stream
 const processedStream = audioStream.getProcessedStream();
-console.log('Processed stream created:', processedStream);
+console.log("Processed stream created:", processedStream);
 
 // Cleanup when done
 audioStream.cleanup();
@@ -322,6 +334,7 @@ audioStream.cleanup();
 #### Enable Wake Word
 
 Update `frontend/.env`:
+
 ```env
 VITE_WAKE_WORD_ENABLED=true
 VITE_PORCUPINE_ACCESS_KEY=your-actual-key-here
@@ -337,6 +350,7 @@ VITE_PORCUPINE_ACCESS_KEY=your-actual-key-here
 6. Voice panel should activate automatically
 
 **Check Browser Console:**
+
 ```
 Wake word detected!
 Porcupine wake word detection started
@@ -347,6 +361,7 @@ Porcupine wake word detection started
 ## Verification Checklist
 
 ### Backend
+
 - [ ] Redis server running (`redis-cli ping` returns PONG)
 - [ ] Backend starts without errors
 - [ ] Backend logs show "Connected to Redis at localhost:6379"
@@ -357,6 +372,7 @@ Porcupine wake word detection started
 - [ ] Fallback to in-memory storage when Redis is down
 
 ### Frontend
+
 - [ ] New dependencies installed (`@picovoice/porcupine-react`, etc.)
 - [ ] Environment variables configured (.env has Porcupine key)
 - [ ] Frontend builds without errors
@@ -364,6 +380,7 @@ Porcupine wake word detection started
 - [ ] Noise filtering utility works (check console)
 
 ### Integration
+
 - [ ] Voice commands work end-to-end
 - [ ] Context persists between commands
 - [ ] Follow-up commands resolve references
@@ -379,6 +396,7 @@ Porcupine wake word detection started
 **Error:** `ConnectionError: Error connecting to localhost:6379`
 
 **Solution:**
+
 1. Check if Redis server is running: `redis-cli ping`
 2. If not running, start Redis server
 3. Check firewall/antivirus blocking port 6379
@@ -389,6 +407,7 @@ Porcupine wake word detection started
 **Error:** `Invalid access key` or `403 Forbidden`
 
 **Solution:**
+
 1. Verify key is correct (no extra spaces)
 2. Check if key is activated in Picovoice console
 3. Ensure you're not exceeding free tier limits
@@ -399,6 +418,7 @@ Porcupine wake word detection started
 **Issue:** Context is empty after update
 
 **Solution:**
+
 1. Check Redis connection: `redis-cli GET voice_context:YourUserName`
 2. Verify user_name matches exactly (case-sensitive)
 3. Check backend logs for errors
@@ -409,6 +429,7 @@ Porcupine wake word detection started
 **Error:** `Microphone access denied`
 
 **Solution:**
+
 1. Check browser permissions (URL bar → lock icon → allow microphone)
 2. Ensure HTTPS connection (or localhost exception)
 3. Check OS microphone permissions
@@ -419,6 +440,7 @@ Porcupine wake word detection started
 **Error:** `Cannot find module '@picovoice/porcupine-react'`
 
 **Solution:**
+
 ```powershell
 cd frontend
 rm -r node_modules
@@ -452,6 +474,7 @@ npm install
 ### Test Scenarios to Try
 
 1. **Multi-turn Conversation:**
+
    ```
    User: "Track order 1003"
    Bot: "Order 1003 is packed..."
@@ -477,6 +500,7 @@ npm install
 ## Environment Variables Summary
 
 ### Backend (.env)
+
 ```env
 # MongoDB
 MONGODB_URL=mongodb://localhost:27017
@@ -503,6 +527,7 @@ ENABLE_AZURE_FALLBACK=false
 ```
 
 ### Frontend (.env)
+
 ```env
 # Backend API
 VITE_API_URL=http://127.0.0.1:8000

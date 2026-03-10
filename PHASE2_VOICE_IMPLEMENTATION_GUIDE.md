@@ -36,6 +36,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 6. **React Speech Kit** for enhanced frontend integration
 
 **Key Benefits:**
+
 - ✅ True hands-free operation with wake word
 - ✅ Works offline in warehouses/vehicles
 - ✅ Excellent noise filtering for industrial environments
@@ -55,6 +56,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### Backend (Python + FastAPI)
 
 **Current Technologies:**
+
 ```python
 - SpeechRecognition (Google Speech Recognition API)
 - pyttsx3 (offline TTS for English)
@@ -64,6 +66,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ```
 
 **Strengths:**
+
 - ✅ Working authentication & authorization
 - ✅ Role-based command processing
 - ✅ Bilingual support foundation
@@ -71,6 +74,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - ✅ Audit logging infrastructure in place
 
 **Weaknesses:**
+
 - ❌ No wake word detection
 - ❌ Requires internet for STT (Google API)
 - ❌ Basic noise filtering only
@@ -81,6 +85,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### Frontend (React + Web Speech API)
 
 **Current Technologies:**
+
 ```javascript
 - Web Speech API (SpeechRecognition)
 - Web Speech API (SpeechSynthesis)
@@ -89,12 +94,14 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ```
 
 **Strengths:**
+
 - ✅ Browser-native speech API (no external dependencies)
 - ✅ Real-time transcript display
 - ✅ Bilingual TTS with voice selection
 - ✅ Manual fallback for noisy environments
 
 **Weaknesses:**
+
 - ❌ Requires button press (not hands-free)
 - ❌ Browser-only (no native mobile yet)
 - ❌ Limited noise filtering
@@ -140,11 +147,13 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### 1. Wake Word Detection
 
 **Business Need:**
+
 - Warehouse staff have hands occupied (picking/packing)
 - Delivery drivers need hands on steering wheel
 - Safety regulations prohibit holding devices while driving
 
 **Technical Requirements:**
+
 - Must work offline (warehouse Wi-Fi unreliable)
 - Low CPU usage (run on tablets/smartphones)
 - Multi-language wake words ("Hey Logistics" + Tamil equivalent)
@@ -154,11 +163,13 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### 2. Context-Aware Commands
 
 **Business Need:**
+
 - Reduce repetition ("Track order 1003" → "Call the customer" → "Mark it delivered")
 - Natural conversation flow
 - Faster operations (chaining commands saves 30% time)
 
 **Technical Requirements:**
+
 - Session-based context storage (Redis or in-memory)
 - Track last mentioned order_id, customer, location
 - Support anaphoric references ("it", "that order", "the customer")
@@ -168,11 +179,13 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### 3. Noise Filtering
 
 **Business Need:**
+
 - Warehouse: forklifts, conveyor belts, PA system announcements
 - Vehicle: engine noise, traffic, wind, music
 - Outdoor delivery: street noise, dogs barking
 
 **Technical Requirements:**
+
 - Acoustic Echo Cancellation (AEC)
 - Automatic Gain Control (AGC)
 - Noise Suppression (NS)
@@ -184,6 +197,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 **New Commands Needed:**
 
 **Delivery Driver:**
+
 - "How many deliveries left today?"
 - "What's my route?"
 - "Get directions to next stop"
@@ -193,6 +207,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - "Take a photo" (proof of delivery)
 
 **Warehouse Staff:**
+
 - "Show me picking sequence for order 1003"
 - "Where is item XYZ located?"
 - "Report inventory discrepancy"
@@ -200,6 +215,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - "What's the next order to pack?"
 
 **Common:**
+
 - "Repeat that"
 - "Speak slower"
 - "Switch to Tamil/English"
@@ -213,11 +229,13 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### Option 1: Cloud-Based Enterprise (Azure Cognitive Services)
 
 **Components:**
+
 - Azure Speech Service (STT/TTS)
 - Azure Custom Commands (Context Management)
 - Azure Language Understanding (LUIS)
 
 **Pros:**
+
 - ✅ Best-in-class accuracy (95%+ in noisy environments)
 - ✅ Built-in wake word detection (custom keyword recognition)
 - ✅ Superior noise filtering
@@ -228,6 +246,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - ✅ Analytics dashboard
 
 **Cons:**
+
 - ❌ Requires constant internet (dealbreaker for warehouses)
 - ❌ High recurring costs ($1-4 per hour of audio)
 - ❌ Voice data sent to Microsoft servers (privacy concern)
@@ -235,6 +254,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - ❌ Latency (150-300ms for STT)
 
 **Cost Estimate:**
+
 - $1.50 per audio hour (STT)
 - $16 per million characters (TTS)
 - $5 per 1000 transactions (LUIS)
@@ -247,12 +267,14 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### Option 2: Picovoice Stack (All-in-One Edge AI)
 
 **Components:**
+
 - Porcupine (wake word detection)
 - Leopard (offline speech-to-text)
 - Rhino (custom voice commands)
 - Cobra (voice activity detection)
 
 **Pros:**
+
 - ✅ Complete solution from one vendor
 - ✅ 100% offline (runs on device)
 - ✅ Optimized for edge devices (low CPU/RAM)
@@ -263,6 +285,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - ✅ Privacy-first (data stays local)
 
 **Cons:**
+
 - ❌ Tamil support limited (primarily English)
 - ❌ Higher upfront cost ($2,000-5,000 for commercial license)
 - ❌ Accuracy lower than cloud solutions (90-92% vs 95%+)
@@ -270,6 +293,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - ❌ Limited to predefined commands (Rhino is not free-form)
 
 **Cost Estimate:**
+
 - Porcupine: Free for < 3 keywords, $2,000/year for commercial
 - Leopard: $0.01 per audio hour (perpetual license: $5,000)
 - Rhino: Free for custom commands
@@ -282,6 +306,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### Option 3: Hybrid Open-Source (Recommended)
 
 **Components:**
+
 - **Porcupine** (wake word) - Commercial license
 - **Vosk** (offline STT) - Open source, supports 20+ languages including English/Tamil
 - **WebRTC Audio Processing** (noise filtering) - Open source
@@ -291,6 +316,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - **Azure Speech** (optional fallback) - Cloud
 
 **Pros:**
+
 - ✅ Best balance of cost, features, flexibility
 - ✅ Wake word detection (Porcupine)
 - ✅ Offline STT with Tamil support (Vosk)
@@ -302,12 +328,14 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 - ✅ Full control over customization
 
 **Cons:**
+
 - ⚠️ More complex setup (multiple libraries)
 - ⚠️ Need to train custom NLU models
 - ⚠️ Self-managed updates
 - ⚠️ Accuracy slightly lower than enterprise cloud (92-94%)
 
 **Cost Estimate:**
+
 - Porcupine: $2,000/year (commercial license for 3+ keywords)
 - Vosk: Free
 - WebRTC: Free
@@ -325,16 +353,19 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 ### Option 4: Enhanced Web Speech API (Minimal Upgrade)
 
 **Components:**
+
 - Web Speech API (continue using)
 - Voice Activity Detection (browser-based)
 - Simple context management (localStorage)
 
 **Pros:**
+
 - ✅ Minimal development effort
 - ✅ No additional costs
 - ✅ No new dependencies
 
 **Cons:**
+
 - ❌ No true wake word detection
 - ❌ Still requires internet
 - ❌ Limited noise filtering
@@ -460,6 +491,7 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 #### Week 1: Backend Context Management + NLU Setup
 
 **Tasks:**
+
 1. Set up Redis server for session context
 2. Implement Context Manager service
 3. Install and configure Rasa NLU
@@ -467,12 +499,14 @@ Based on your application's requirements (warehouse/vehicle use, bilingual suppo
 5. Replace regex intent detection with Rasa
 
 **Deliverables:**
+
 - Redis running locally
 - Context API endpoints (`GET/POST /context/{user_id}`)
 - Trained Rasa model (v1.0)
 - Updated `/voice/command` endpoint using NLU
 
 **Code Example - Context Manager:**
+
 ```python
 # backend/context_manager.py
 import redis
@@ -488,14 +522,14 @@ class VoiceContextManager:
             decode_responses=True
         )
         self.context_ttl = 300  # 5 minutes
-    
+
     def get_context(self, user_id: str) -> dict:
         """Retrieve conversation context for user."""
         context_json = self.redis_client.get(f"context:{user_id}")
         if not context_json:
             return {}
         return json.loads(context_json)
-    
+
     def update_context(self, user_id: str, updates: dict):
         """Update context and reset TTL."""
         current = self.get_context(user_id)
@@ -505,7 +539,7 @@ class VoiceContextManager:
             timedelta(seconds=self.context_ttl),
             json.dumps(current)
         )
-    
+
     def resolve_anaphora(self, command: str, context: dict) -> str:
         """Replace pronouns with actual entities from context."""
         replacements = {
@@ -514,18 +548,19 @@ class VoiceContextManager:
             "the customer": context.get("last_customer_phone", ""),
             "next stop": context.get("next_delivery_location", ""),
         }
-        
+
         resolved = command
         for pronoun, entity in replacements.items():
             if pronoun in command.lower() and entity:
                 resolved = resolved.replace(pronoun, entity)
-        
+
         return resolved
 ```
 
 #### Week 2: Frontend Wake Word Integration
 
 **Tasks:**
+
 1. Install Porcupine SDK (npm package)
 2. Create custom wake words ("Hey Logistics", Tamil equivalent)
 3. Implement continuous listening mode
@@ -533,16 +568,18 @@ class VoiceContextManager:
 5. Test in noisy environments
 
 **Deliverables:**
+
 - Porcupine integrated in frontend
 - Wake word activated listening
 - UI shows "Listening for wake word..." state
 - Demo video showing hands-free activation
 
 **Code Example - Wake Word Component:**
+
 ```javascript
 // frontend/src/hooks/useWakeWord.js
-import { useEffect, useRef, useState } from 'react';
-import { PorcupineWorker } from '@picovoice/porcupine-web';
+import { useEffect, useRef, useState } from "react";
+import { PorcupineWorker } from "@picovoice/porcupine-web";
 
 export const useWakeWord = ({ onWakeWordDetected, enabled = true }) => {
   const [isListening, setIsListening] = useState(false);
@@ -554,26 +591,26 @@ export const useWakeWord = ({ onWakeWordDetected, enabled = true }) => {
     const initPorcupine = async () => {
       try {
         const accessKey = import.meta.env.VITE_PORCUPINE_ACCESS_KEY;
-        
+
         porcupineRef.current = await PorcupineWorker.create(
           accessKey,
           [
-            { 
-              builtin: 'Hey Google',  // Replace with custom keyword
-              label: 'logistics'
-            }
+            {
+              builtin: "Hey Google", // Replace with custom keyword
+              label: "logistics",
+            },
           ],
           (keywordIndex) => {
-            console.log('Wake word detected:', keywordIndex);
+            console.log("Wake word detected:", keywordIndex);
             onWakeWordDetected?.();
-          }
+          },
         );
 
         await porcupineRef.current.start();
         setIsListening(true);
-        console.log('Porcupine wake word detection started');
+        console.log("Porcupine wake word detection started");
       } catch (error) {
-        console.error('Failed to initialize Porcupine:', error);
+        console.error("Failed to initialize Porcupine:", error);
       }
     };
 
@@ -594,6 +631,7 @@ export const useWakeWord = ({ onWakeWordDetected, enabled = true }) => {
 #### Week 3: Noise Filtering + Vosk STT Integration
 
 **Tasks:**
+
 1. Integrate WebRTC Audio Processing in frontend
 2. Download and serve Vosk models (English + Tamil)
 3. Implement Vosk WebSocket endpoint in backend
@@ -601,12 +639,14 @@ export const useWakeWord = ({ onWakeWordDetected, enabled = true }) => {
 5. Configure Azure fallback
 
 **Deliverables:**
+
 - Noise-filtered audio input
 - Vosk working offline for English
 - Tamil model integrated
 - Azure fallback configured
 
 **Code Example - WebRTC Noise Filter:**
+
 ```javascript
 // frontend/src/utils/audioProcessing.js
 export class NoiseFilteredAudioStream {
@@ -616,16 +656,18 @@ export class NoiseFilteredAudioStream {
   }
 
   async initialize() {
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
+    this.audioContext = new (
+      window.AudioContext || window.webkitAudioContext
+    )();
+
     const constraints = {
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
         channelCount: 1,
-        sampleRate: 16000
-      }
+        sampleRate: 16000,
+      },
     };
 
     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -634,16 +676,16 @@ export class NoiseFilteredAudioStream {
 
   getProcessedStream() {
     if (!this.stream || !this.audioContext) {
-      throw new Error('Audio stream not initialized');
+      throw new Error("Audio stream not initialized");
     }
 
     const source = this.audioContext.createMediaStreamSource(this.stream);
-    
+
     // Advanced noise filtering
     const filter = this.audioContext.createBiquadFilter();
-    filter.type = 'highpass';
+    filter.type = "highpass";
     filter.frequency.value = 200; // Remove low-frequency noise
-    
+
     const compressor = this.audioContext.createDynamicsCompressor();
     compressor.threshold.value = -50;
     compressor.knee.value = 40;
@@ -669,6 +711,7 @@ export class NoiseFilteredAudioStream {
 #### Week 4: Implement New Delivery Commands
 
 **New Commands:**
+
 - "How many deliveries left today?"
 - "What's my route?"
 - "Customer not available for order {id}"
@@ -676,6 +719,7 @@ export class NoiseFilteredAudioStream {
 - "Skip to next delivery"
 
 **Tasks:**
+
 1. Add Rasa training data for new intents
 2. Create exception handling endpoints
 3. Implement route query logic
@@ -683,6 +727,7 @@ export class NoiseFilteredAudioStream {
 5. Add unit tests for new commands
 
 **Deliverables:**
+
 - 5 new intents trained
 - API endpoints for exceptions
 - Updated command documentation
@@ -690,12 +735,14 @@ export class NoiseFilteredAudioStream {
 #### Week 5: Implement New Warehouse Commands
 
 **New Commands:**
+
 - "Show picking sequence for order {id}"
 - "Where is item {name} located?"
 - "What's next order to pack?"
 - "Report inventory discrepancy"
 
 **Tasks:**
+
 1. Add warehouse-specific NLU training
 2. Implement picking sequence algorithm
 3. Create inventory location query
@@ -705,6 +752,7 @@ export class NoiseFilteredAudioStream {
 #### Week 6: Context-Aware Follow-ups
 
 **Example Flows:**
+
 ```
 User: "Track order 1003"
 Bot: "Order 1003 is packed and heading to 123 Main Street"
@@ -718,6 +766,7 @@ Bot: [Resolves "it" to ORD-1003] "Order 1003 marked as delivered"
 ```
 
 **Tasks:**
+
 1. Implement dialogue state tracking
 2. Add slot carryover logic
 3. Create clarification prompts
@@ -731,6 +780,7 @@ Bot: [Resolves "it" to ORD-1003] "Order 1003 marked as delivered"
 #### Week 7: Performance Tuning
 
 **Tasks:**
+
 1. Optimize Vosk model loading (lazy load)
 2. Implement audio chunking for faster STT
 3. Add response caching for common commands
@@ -738,6 +788,7 @@ Bot: [Resolves "it" to ORD-1003] "Order 1003 marked as delivered"
 5. Profile and optimize NLU inference time
 
 **Targets:**
+
 - Wake word detection: < 500ms
 - STT latency: < 1.5s (offline), < 1s (cloud)
 - Command execution: < 2s total
@@ -746,6 +797,7 @@ Bot: [Resolves "it" to ORD-1003] "Order 1003 marked as delivered"
 #### Week 8: Testing & Documentation
 
 **Testing:**
+
 - Unit tests (80% code coverage)
 - Integration tests (end-to-end flows)
 - Noise environment testing (warehouse, vehicle recordings)
@@ -753,6 +805,7 @@ Bot: [Resolves "it" to ORD-1003] "Order 1003 marked as delivered"
 - Load testing (50 concurrent users)
 
 **Documentation:**
+
 - User guide for warehouse staff
 - User guide for delivery drivers
 - Admin configuration guide
@@ -766,6 +819,7 @@ Bot: [Resolves "it" to ORD-1003] "Order 1003 marked as delivered"
 ### Dependencies Update
 
 **Backend (`requirements.txt`):**
+
 ```txt
 # Existing dependencies
 fastapi
@@ -791,6 +845,7 @@ soundfile>=0.12.0              # Audio file I/O
 ```
 
 **Frontend (`package.json`):**
+
 ```json
 {
   "dependencies": {
@@ -799,7 +854,7 @@ soundfile>=0.12.0              # Audio file I/O
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.13.1",
-    
+
     // Phase 2 additions
     "@picovoice/porcupine-web": "^2.2.0",
     "@picovoice/web-voice-processor": "^4.0.0",
@@ -812,18 +867,21 @@ soundfile>=0.12.0              # Audio file I/O
 ### Infrastructure Requirements
 
 **Development Environment:**
+
 - CPU: 4+ cores recommended
 - RAM: 8GB minimum, 16GB recommended
 - Storage: 5GB free (for voice models)
 - OS: Windows/Linux/macOS
 
 **Production Environment:**
+
 - Backend: 2 vCPUs, 4GB RAM per instance
 - Redis: 1GB RAM
 - Storage: 10GB for logs + models
 - Network: 100Mbps+ for cloud fallback
 
 **Voice Models Storage:**
+
 ```
 /backend/models/
 ├── vosk/
@@ -872,36 +930,38 @@ GET    /analytics/user-voice-stats/{user_id} # Per-user voice statistics
 
 ### One-Time Costs
 
-| Item | Cost | Notes |
-|------|------|-------|
-| Porcupine Commercial License | $2,000/year | Up to 10 custom wake words |
-| Development (8 weeks @ $50/hr, 40hr/week) | $16,000 | Internal or contractor |
-| Testing & QA | $2,000 | User acceptance testing |
-| **Total One-Time** | **$20,000** | Year 1 |
+| Item                                      | Cost        | Notes                      |
+| ----------------------------------------- | ----------- | -------------------------- |
+| Porcupine Commercial License              | $2,000/year | Up to 10 custom wake words |
+| Development (8 weeks @ $50/hr, 40hr/week) | $16,000     | Internal or contractor     |
+| Testing & QA                              | $2,000      | User acceptance testing    |
+| **Total One-Time**                        | **$20,000** | Year 1                     |
 
 ### Recurring Costs (Annual)
 
-| Item | Cost/Year | Notes |
-|------|-----------|-------|
-| Porcupine License Renewal | $2,000 | Annual subscription |
-| Azure Speech (fallback) | $1,200 | ~100 hours/month @ $1/hr |
-| Redis Cloud (if not self-hosted) | $0-600 | Free tier available |
-| **Total Recurring** | **$3,200-3,800** | Years 2+ |
+| Item                             | Cost/Year        | Notes                    |
+| -------------------------------- | ---------------- | ------------------------ |
+| Porcupine License Renewal        | $2,000           | Annual subscription      |
+| Azure Speech (fallback)          | $1,200           | ~100 hours/month @ $1/hr |
+| Redis Cloud (if not self-hosted) | $0-600           | Free tier available      |
+| **Total Recurring**              | **$3,200-3,800** | Years 2+                 |
 
 ### Cost Comparison vs Alternatives
 
-| Solution | Year 1 | Year 2-5 (Annual) |
-|----------|--------|-------------------|
-| **Hybrid (Recommended)** | $20,000 | $3,500 |
-| Pure Cloud (Azure) | $12,000 | $10,800 |
-| Picovoice Enterprise | $25,000 | $7,000 |
-| Basic Web Speech (no wake word) | $5,000 | $0 |
+| Solution                        | Year 1  | Year 2-5 (Annual) |
+| ------------------------------- | ------- | ----------------- |
+| **Hybrid (Recommended)**        | $20,000 | $3,500            |
+| Pure Cloud (Azure)              | $12,000 | $10,800           |
+| Picovoice Enterprise            | $25,000 | $7,000            |
+| Basic Web Speech (no wake word) | $5,000  | $0                |
 
 **Break-Even Analysis:**
+
 - Hybrid vs Cloud: Break-even at 2.2 years
 - Hybrid vs Picovoice: Break-even at 3.5 years
 
 **Value Delivered:**
+
 - 30% time savings per user × 100 users × 2 hr/day × $15/hr = **$9,000/month productivity gain**
 - ROI: 540% in first year
 
@@ -911,30 +971,30 @@ GET    /analytics/user-voice-stats/{user_id} # Per-user voice statistics
 
 ### Technical Risks
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Vosk accuracy insufficient in noisy environments | Medium | High | WebRTC noise filtering + Azure fallback |
-| Porcupine false positives disrupt workflow | Medium | Medium | Tunable sensitivity, second confirmation |
-| Tamil STT quality poor | Medium | High | Azure fallback for Tamil, collect training data |
-| Redis context lost on restart | Low | Medium | Persist to MongoDB every 5 minutes |
-| Wake word CPU usage too high on tablets | Low | Medium | Optimize Porcupine settings, use lower-res models |
+| Risk                                             | Probability | Impact | Mitigation                                        |
+| ------------------------------------------------ | ----------- | ------ | ------------------------------------------------- |
+| Vosk accuracy insufficient in noisy environments | Medium      | High   | WebRTC noise filtering + Azure fallback           |
+| Porcupine false positives disrupt workflow       | Medium      | Medium | Tunable sensitivity, second confirmation          |
+| Tamil STT quality poor                           | Medium      | High   | Azure fallback for Tamil, collect training data   |
+| Redis context lost on restart                    | Low         | Medium | Persist to MongoDB every 5 minutes                |
+| Wake word CPU usage too high on tablets          | Low         | Medium | Optimize Porcupine settings, use lower-res models |
 
 ### Operational Risks
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Users resist voice adoption | Low | High | Training, demos, gradual rollout |
-| Privacy concerns over voice recording | Medium | High | Clear consent, local processing, audit logs |
-| Internet outages disable cloud fallback | High | Low | Primary offline system unaffected |
-| Device compatibility issues (old tablets) | Medium | Medium | Browser compatibility testing, progressive enhancement |
+| Risk                                      | Probability | Impact | Mitigation                                             |
+| ----------------------------------------- | ----------- | ------ | ------------------------------------------------------ |
+| Users resist voice adoption               | Low         | High   | Training, demos, gradual rollout                       |
+| Privacy concerns over voice recording     | Medium      | High   | Clear consent, local processing, audit logs            |
+| Internet outages disable cloud fallback   | High        | Low    | Primary offline system unaffected                      |
+| Device compatibility issues (old tablets) | Medium      | Medium | Browser compatibility testing, progressive enhancement |
 
 ### Business Risks
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Budget overrun | Low | Medium | Phased approach, stop after Phase 2A if needed |
-| Timeline delays | Medium | Medium | Weekly progress reviews, buffer time built in |
-| Feature creep | Medium | Medium | Strict scope control, backlog for Phase 3 |
+| Risk            | Probability | Impact | Mitigation                                     |
+| --------------- | ----------- | ------ | ---------------------------------------------- |
+| Budget overrun  | Low         | Medium | Phased approach, stop after Phase 2A if needed |
+| Timeline delays | Medium      | Medium | Weekly progress reviews, buffer time built in  |
+| Feature creep   | Medium      | Medium | Strict scope control, backlog for Phase 3      |
 
 ---
 
@@ -942,32 +1002,32 @@ GET    /analytics/user-voice-stats/{user_id} # Per-user voice statistics
 
 ### Technical KPIs
 
-| Metric | Current | Phase 2 Target |
-|--------|---------|----------------|
-| Wake Word Detection Latency | N/A | < 500ms |
-| STT Accuracy (Clean Environment) | 90% | 94% |
-| STT Accuracy (Noisy Environment) | 75% | 88% |
-| Command Success Rate | 82% | 95% |
-| False Wake Word Rate | N/A | < 1/hour |
-| Average Command Completion Time | 8 seconds | 4 seconds |
+| Metric                           | Current   | Phase 2 Target |
+| -------------------------------- | --------- | -------------- |
+| Wake Word Detection Latency      | N/A       | < 500ms        |
+| STT Accuracy (Clean Environment) | 90%       | 94%            |
+| STT Accuracy (Noisy Environment) | 75%       | 88%            |
+| Command Success Rate             | 82%       | 95%            |
+| False Wake Word Rate             | N/A       | < 1/hour       |
+| Average Command Completion Time  | 8 seconds | 4 seconds      |
 
 ### Business KPIs
 
-| Metric | Current | Phase 2 Target |
-|--------|---------|----------------|
-| Voice Commands per User per Day | 15 | 45 |
-| Manual Input Fallback Rate | 40% | 10% |
-| User Satisfaction (1-5) | 3.2 | 4.5+ |
-| Time Saved per Command | 3 seconds | 7 seconds |
-| Training Time for New Users | 30 min | 15 min |
+| Metric                          | Current   | Phase 2 Target |
+| ------------------------------- | --------- | -------------- |
+| Voice Commands per User per Day | 15        | 45             |
+| Manual Input Fallback Rate      | 40%       | 10%            |
+| User Satisfaction (1-5)         | 3.2       | 4.5+           |
+| Time Saved per Command          | 3 seconds | 7 seconds      |
+| Training Time for New Users     | 30 min    | 15 min         |
 
 ### Adoption Metrics
 
-| Metric | Target |
-|--------|--------|
-| Users actively using voice after 1 week | 80% |
-| Users preferring voice over manual | 70% |
-| Daily active voice users | 90% |
+| Metric                                  | Target |
+| --------------------------------------- | ------ |
+| Users actively using voice after 1 week | 80%    |
+| Users preferring voice over manual      | 70%    |
+| Daily active voice users                | 90%    |
 
 ---
 
@@ -1002,49 +1062,50 @@ GET    /analytics/user-voice-stats/{user_id} # Per-user voice statistics
 ```yaml
 # backend/nlu_data/logistics_commands.yml
 nlu:
-- intent: track_order
-  examples: |
-    - track order [1003](order_id)
-    - where is order [ORD-1005](order_id)
-    - status of order [1003](order_id)
-    - [1003](order_id) order எங்கே இருக்கு
-    - show me order [ORD-1010](order_id)
+  - intent: track_order
+    examples: |
+      - track order [1003](order_id)
+      - where is order [ORD-1005](order_id)
+      - status of order [1003](order_id)
+      - [1003](order_id) order எங்கே இருக்கு
+      - show me order [ORD-1010](order_id)
 
-- intent: mark_delivered
-  examples: |
-    - mark [1003](order_id) delivered
-    - order [ORD-1005](order_id) is delivered
-    - delivered [1003](order_id)
-    - [1003](order_id) delivery முடிஞ்சுது
-    - set [ORD-1001](order_id) as delivered
+  - intent: mark_delivered
+    examples: |
+      - mark [1003](order_id) delivered
+      - order [ORD-1005](order_id) is delivered
+      - delivered [1003](order_id)
+      - [1003](order_id) delivery முடிஞ்சுது
+      - set [ORD-1001](order_id) as delivered
 
-- intent: next_delivery
-  examples: |
-    - what is my next delivery
-    - next stop
-    - where do I go next
-    - அடுத்த delivery எங்கே
-    - show next delivery
+  - intent: next_delivery
+    examples: |
+      - what is my next delivery
+      - next stop
+      - where do I go next
+      - அடுத்த delivery எங்கே
+      - show next delivery
 
-- intent: call_customer
-  examples: |
-    - call the customer
-    - phone the customer for [1003](order_id)
-    - customer ku call pannunga
-    - contact customer
-    - call consignee
+  - intent: call_customer
+    examples: |
+      - call the customer
+      - phone the customer for [1003](order_id)
+      - customer ku call pannunga
+      - contact customer
+      - call consignee
 
-- intent: report_exception
-  examples: |
-    - customer not available for [1003](order_id)
-    - package damaged for [ORD-1005](order_id)
-    - wrong address for [1003](order_id)
-    - [1003](order_id) customer இல்ல
+  - intent: report_exception
+    examples: |
+      - customer not available for [1003](order_id)
+      - package damaged for [ORD-1005](order_id)
+      - wrong address for [1003](order_id)
+      - [1003](order_id) customer இல்ல
 ```
 
 ### B. Voice Command Cheat Sheet for Users
 
 **Warehouse Staff:**
+
 ```
 ✓ "What products are assigned to me?"
 ✓ "Mark order 1003 as packed"
@@ -1055,6 +1116,7 @@ nlu:
 ```
 
 **Delivery Drivers:**
+
 ```
 ✓ "What is my next delivery?"
 ✓ "How many deliveries left today?"
@@ -1066,6 +1128,7 @@ nlu:
 ```
 
 **Common:**
+
 ```
 ✓ "Repeat that"
 ✓ "Switch to Tamil"
@@ -1076,13 +1139,13 @@ nlu:
 
 ### C. Browser Compatibility Matrix
 
-| Feature | Chrome | Edge | Firefox | Safari | Mobile Chrome | Mobile Safari |
-|---------|--------|------|---------|--------|---------------|---------------|
-| Wake Word (Porcupine) | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ Limited |
-| Vosk STT | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| WebRTC Noise Filter | ✅ | ✅ | ✅ | ⚠️ Partial | ✅ | ⚠️ Partial |
-| Web Speech API (fallback) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Audio Context | ✅ | ✅ | ✅ | ⚠️ Limited | ✅ | ⚠️ Limited |
+| Feature                   | Chrome | Edge | Firefox | Safari     | Mobile Chrome | Mobile Safari |
+| ------------------------- | ------ | ---- | ------- | ---------- | ------------- | ------------- |
+| Wake Word (Porcupine)     | ✅     | ✅   | ✅      | ✅         | ✅            | ⚠️ Limited    |
+| Vosk STT                  | ✅     | ✅   | ✅      | ❌         | ✅            | ❌            |
+| WebRTC Noise Filter       | ✅     | ✅   | ✅      | ⚠️ Partial | ✅            | ⚠️ Partial    |
+| Web Speech API (fallback) | ✅     | ✅   | ❌      | ✅         | ✅            | ✅            |
+| Audio Context             | ✅     | ✅   | ✅      | ⚠️ Limited | ✅            | ⚠️ Limited    |
 
 **Recommendation:** Target Chrome/Edge for optimal experience, with graceful degradation for Safari/Firefox.
 
