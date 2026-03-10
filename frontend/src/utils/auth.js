@@ -1,5 +1,5 @@
 // Authentication helpers using backend API and JWT tokens
-import { authAPI } from './api';
+import { authAPI } from "./api";
 
 const CURRENT_USER_KEY = "vla_current_user";
 const TOKEN_KEY = "access_token";
@@ -16,24 +16,24 @@ export const registerUser = async ({ name, email, password, role }) => {
   try {
     // Map frontend role names to backend role names
     const roleMap = {
-      "Admin": "admin",
+      Admin: "admin",
       "Warehouse Staff": "warehouse",
       "Delivery Person": "delivery",
     };
-    
+
     const backendRole = roleMap[role] || role.toLowerCase();
-    
+
     const response = await authAPI.register({
       name,
       email,
       password,
       role: backendRole,
     });
-    
+
     return { success: true, user: response };
   } catch (error) {
-    console.error('Registration error:', error);
-    throw new Error(error.message || 'Registration failed');
+    console.error("Registration error:", error);
+    throw new Error(error.message || "Registration failed");
   }
 };
 
@@ -41,28 +41,28 @@ export const registerUser = async ({ name, email, password, role }) => {
 export const loginUser = async (email, password) => {
   try {
     const response = await authAPI.login(email, password);
-    
+
     // Store JWT token
     localStorage.setItem(TOKEN_KEY, response.access_token);
-    
+
     // Decode JWT to get user info (simple base64 decode)
-    const tokenPayload = JSON.parse(atob(response.access_token.split('.')[1]));
-    
+    const tokenPayload = JSON.parse(atob(response.access_token.split(".")[1]));
+
     const user = {
       email: tokenPayload.sub,
       role: tokenPayload.role,
-      name: email.split('@')[0], // Temporary until we fetch full user data
+      name: email.split("@")[0], // Temporary until we fetch full user data
     };
-    
+
     // Store user info
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    
+
     // Store user_id separately for easy access (email is the user ID)
-    localStorage.setItem('user_id', tokenPayload.sub);
-    
+    localStorage.setItem("user_id", tokenPayload.sub);
+
     return user;
   } catch (error) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     return null;
   }
 };
@@ -93,5 +93,5 @@ export const isAuthenticated = () => {
 export const logoutUser = () => {
   localStorage.removeItem(CURRENT_USER_KEY);
   localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem('user_id');
+  localStorage.removeItem("user_id");
 };
