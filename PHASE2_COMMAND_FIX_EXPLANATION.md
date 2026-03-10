@@ -16,11 +16,13 @@ You tried these commands and got "Sorry, I could not map that command to a suppo
 **Command:** "Mark it in transit"
 
 **Why it failed:**
+
 - "it" is an **anaphoric reference** (refers to something mentioned earlier)
 - The system needs context to know what "it" refers to
 - You need to **track an order first** to establish context
 
 **Correct sequence:**
+
 ```
 Step 1: "Track order 1011"     ← Establishes context (last_order_id = ORD-1011)
 Step 2: "Mark it in transit"   ← "it" resolves to ORD-1011 ✅
@@ -33,13 +35,15 @@ Step 2: "Mark it in transit"   ← "it" resolves to ORD-1011 ✅
 **Command:** "Where is location"
 
 **Why it failed:**
+
 - Pattern doesn't match supported voice commands
 - Need to say "**what's its location**" or "**where's the location**"
 
 **Correct alternatives:**
+
 ```
 ✅ "What's its location"
-✅ "Where's the location"  
+✅ "Where's the location"
 ❌ "Where is location" (article missing)
 ```
 
@@ -50,12 +54,14 @@ Step 2: "Mark it in transit"   ← "it" resolves to ORD-1011 ✅
 Updated [backend/voice.py](backend/voice.py) with **Phase 2 enhanced intent recognition**:
 
 ### New Intents Added:
+
 1. ✅ **mark_in_transit** - "mark it in transit", "mark it transit"
 2. ✅ **mark_pending** - "mark it pending"
 3. ✅ **query_location** - "what's its location", "where's the location"
 4. ✅ **update_location** - "update its location to Chennai"
 
 ### Context Tracking Enhanced:
+
 - All commands now save context to Redis
 - All responses include `context_updated: true/false`
 - Anaphoric resolution works for "it", "its", "that order"
@@ -67,6 +73,7 @@ Updated [backend/voice.py](backend/voice.py) with **Phase 2 enhanced intent reco
 ### ⚠️ IMPORTANT: You MUST restart the backend server for changes to take effect!
 
 **Terminal (backend):**
+
 ```powershell
 # Press Ctrl+C to stop current server
 # Then restart:
@@ -77,9 +84,11 @@ python -m uvicorn main:app --reload
 ### Then test this sequence:
 
 #### Step 1: Establish Context
+
 **Command:** "Track order 1011"
 
 **Expected Response:**
+
 ```javascript
 {
   "response": "Order ORD-1011 is currently pending and is headed to Mumbai",
@@ -90,9 +99,11 @@ python -m uvicorn main:app --reload
 ```
 
 #### Step 2: Use Anaphoric Command
+
 **Command:** "Mark it in transit"
 
 **Expected Response:**
+
 ```javascript
 {
   "response": "Order ORD-1011 has been marked as in transit",
@@ -104,9 +115,11 @@ python -m uvicorn main:app --reload
 ```
 
 #### Step 3: Query Location
+
 **Command:** "What's its location"
 
 **Expected Response:**
+
 ```javascript
 {
   "response": "Order ORD-1011 is headed to Mumbai",
@@ -117,9 +130,11 @@ python -m uvicorn main:app --reload
 ```
 
 #### Step 4: Update Location
+
 **Command:** "Update its location to Chennai"
 
 **Expected Response:**
+
 ```javascript
 {
   "response": "Order ORD-1011 location updated to Chennai",
@@ -135,6 +150,7 @@ python -m uvicorn main:app --reload
 ## 📋 Complete Supported Commands Reference
 
 ### Order Tracking
+
 ```
 ✅ "Track order 1011"
 ✅ "Track order ORD-1011"
@@ -144,6 +160,7 @@ python -m uvicorn main:app --reload
 ```
 
 ### Status Updates
+
 ```
 ✅ "Mark it packed" (warehouse only)
 ✅ "Mark it in transit" (delivery only)
@@ -152,6 +169,7 @@ python -m uvicorn main:app --reload
 ```
 
 ### Location Commands
+
 ```
 ✅ "What's its location"
 ✅ "Where's the location"
@@ -160,6 +178,7 @@ python -m uvicorn main:app --reload
 ```
 
 ### Query Commands
+
 ```
 ✅ "Show pending orders"
 ✅ "List pending orders"
@@ -169,19 +188,20 @@ python -m uvicorn main:app --reload
 
 ## ❌ Common Mistakes & Fixes
 
-| ❌ Wrong | ✅ Correct | Why |
-|----------|-----------|-----|
-| "Mark it in transit" (first command) | "Track order 1011" THEN "Mark it in transit" | Need context first |
-| "Where is location" | "What's its location" | Missing article "the" or possessive "its" |
-| "Mark that in transit" | "Mark it in transit" | Use "it" not "that" |
-| "Update location Chennai" | "Update location to Chennai" | Missing "to" |
-| "Show me order 1011" | "Track order 1011" or "Show order 1011" | Extra "me" not supported |
+| ❌ Wrong                             | ✅ Correct                                   | Why                                       |
+| ------------------------------------ | -------------------------------------------- | ----------------------------------------- |
+| "Mark it in transit" (first command) | "Track order 1011" THEN "Mark it in transit" | Need context first                        |
+| "Where is location"                  | "What's its location"                        | Missing article "the" or possessive "its" |
+| "Mark that in transit"               | "Mark it in transit"                         | Use "it" not "that"                       |
+| "Update location Chennai"            | "Update location to Chennai"                 | Missing "to"                              |
+| "Show me order 1011"                 | "Track order 1011" or "Show order 1011"      | Extra "me" not supported                  |
 
 ---
 
 ## 🔄 Testing Workflow
 
 ### Scenario 1: Complete Order Flow
+
 ```
 1. Login as delivery user
 2. "Track order 1011"          → Status: pending, Context saved
@@ -192,6 +212,7 @@ python -m uvicorn main:app --reload
 ```
 
 ### Scenario 2: Multiple Orders
+
 ```
 1. "Track order 1011"          → Context: last_order = ORD-1011
 2. "Mark it in transit"        → Updates ORD-1011
@@ -200,6 +221,7 @@ python -m uvicorn main:app --reload
 ```
 
 ### Scenario 3: No Context Error
+
 ```
 1. Login
 2. "Mark it in transit" (without tracking first)
@@ -226,6 +248,7 @@ Before testing, ensure:
 ## 🧪 How to Test Right Now
 
 **1. Restart backend (REQUIRED!):**
+
 ```powershell
 # In backend terminal, press Ctrl+C
 cd e:\tnimpact\backend
@@ -233,26 +256,29 @@ python -m uvicorn main:app --reload
 ```
 
 **2. In browser (already logged in as delivery):**
+
 ```
 Say: "Track order 1011"
 See: Response with context_updated: true
 
-Say: "Mark it in transit"  
+Say: "Mark it in transit"
 See: "Order ORD-1011 has been marked as in transit"
 ```
 
 **3. Verify in console (F12):**
+
 ```javascript
 // Check context was saved
-const userId = localStorage.getItem('user_id');
+const userId = localStorage.getItem("user_id");
 fetch(`http://localhost:8000/context/${userId}`, {
-  headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+  headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
 })
-  .then(r => r.json())
-  .then(d => console.log('Context:', d));
+  .then((r) => r.json())
+  .then((d) => console.log("Context:", d));
 ```
 
 **Expected:**
+
 ```javascript
 {
   last_order_id: "ORD-1011",
@@ -267,18 +293,21 @@ fetch(`http://localhost:8000/context/${userId}`, {
 ## 📊 Summary
 
 **What was wrong:**
+
 1. ❌ Backend didn't support "in transit" status commands
 2. ❌ Backend didn't support location query patterns
 3. ❌ You tried "mark it" without tracking an order first (no context)
 4. ❌ "Where is location" didn't match any pattern
 
 **What's fixed:**
+
 1. ✅ Added 4 new intent handlers (mark_in_transit, mark_pending, query_location, update_location)
 2. ✅ Enhanced pattern matching for natural language
 3. ✅ All commands now save/update context
 4. ✅ Better error messages when context is missing
 
 **What you need to do:**
+
 1. 🔄 **Restart backend server** (changes take effect)
 2. 🧪 Test sequence: "Track order 1011" → "Mark it in transit"
 3. ✅ Verify context_updated: true in responses
