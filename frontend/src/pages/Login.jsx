@@ -24,7 +24,7 @@ function Login() {
       }
 
       toast.success("Login successful");
-      
+
       // Navigate based on user role
       const route = roleToRoute[user.role] || "/";
       navigate(route);
@@ -86,7 +86,7 @@ function Login() {
             Create Account
           </Link>
         </p>
-        
+
         {/* Test credentials hint */}
         <div className="mt-6 rounded-lg bg-blue-50 p-3 dark:bg-slate-800">
           <p className="text-xs font-semibold text-blue-900 dark:text-blue-300 mb-1">
