@@ -30,6 +30,7 @@ function Login() {
       navigate(route);
     } catch (error) {
       toast.error(error.message || "Login failed");
+    } finally {
       setLoading(false);
     }
   };
