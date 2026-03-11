@@ -9,6 +9,7 @@ function Sidebar({ title, items }) {
           <NavLink
             key={`${item.path}-${index}`}
             to={item.path}
+            end={item.end}
             className={({ isActive }) =>
               `block rounded-xl px-3 py-2 text-sm font-medium transition ${
                 isActive

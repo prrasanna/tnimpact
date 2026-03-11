@@ -5,6 +5,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
 import CreateAccount from "./pages/CreateAccount";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
+import DeliveryRoute from "./pages/DeliveryRoute";
+import DeliverySettings from "./pages/DeliverySettings";
+import MyDeliveries from "./pages/mydeliveries";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -36,7 +39,7 @@ function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRole="admin">
+            <ProtectedRoute allowedRole="Admin">
               <AdminDashboard theme={theme} onToggleTheme={handleToggleTheme} />
             </ProtectedRoute>
           }
@@ -44,7 +47,7 @@ function App() {
         <Route
           path="/warehouse"
           element={
-            <ProtectedRoute allowedRole="warehouse">
+            <ProtectedRoute allowedRole="Warehouse Staff">
               <WarehouseDashboard
                 theme={theme}
                 onToggleTheme={handleToggleTheme}
@@ -57,6 +60,33 @@ function App() {
           element={
             <ProtectedRoute allowedRole="delivery">
               <DeliveryDashboard
+                theme={theme}
+                onToggleTheme={handleToggleTheme}
+              />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/my-deliveries"
+          element={
+            <ProtectedRoute allowedRole="delivery">
+              <MyDeliveries theme={theme} onToggleTheme={handleToggleTheme} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/route"
+          element={
+            <ProtectedRoute allowedRole="delivery">
+              <DeliveryRoute theme={theme} onToggleTheme={handleToggleTheme} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/settings"
+          element={
+            <ProtectedRoute allowedRole="delivery">
+              <DeliverySettings
                 theme={theme}
                 onToggleTheme={handleToggleTheme}
               />

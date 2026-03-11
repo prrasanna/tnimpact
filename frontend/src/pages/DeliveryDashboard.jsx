@@ -12,18 +12,21 @@ const toTitleStatus = (status) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
+const normalizeStatus = (status) =>
+  (status || "").toString().trim().toLowerCase().replace(/\s+/g, "_");
+
 const isPendingDelivery = (status) =>
-  ["packed", "out_for_delivery"].includes(status);
+  ["pending", "packed", "out_for_delivery"].includes(normalizeStatus(status));
 
 // Delivery dashboard powered by backend delivery endpoints.
 function DeliveryDashboard({ theme, onToggleTheme }) {
   const currentUser = getCurrentUser();
 
   const navItems = [
-    { label: "Dashboard", path: "/delivery" },
-    { label: "My Deliveries", path: "/delivery" },
-    { label: "Optimized Route", path: "/delivery" },
-    { label: "Settings", path: "/delivery" },
+    { label: "Dashboard", path: "/delivery", end: true },
+    { label: "My Deliveries", path: "/delivery/my-deliveries" },
+    { label: "Optimized Route", path: "/delivery/route" },
+    { label: "Settings", path: "/delivery/settings" },
   ];
 
   const [deliveries, setDeliveries] = useState([]);
@@ -46,20 +49,36 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
     loadDeliveries();
   }, [loadDeliveries]);
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      loadDeliveries();
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [loadDeliveries]);
+
+  const activeDeliveries = useMemo(
+    () =>
+      deliveries.filter(
+        (delivery) => normalizeStatus(delivery.status) !== "delivered",
+      ),
+    [deliveries],
+  );
+
   const dynamicStats = useMemo(() => {
     const completed = deliveries.filter(
-      (delivery) => delivery.status === "delivered",
+      (delivery) => normalizeStatus(delivery.status) === "delivered",
     ).length;
-    const pending = deliveries.filter((delivery) =>
-      isPendingDelivery(delivery.status),
+    const pending = deliveries.filter(
+      (delivery) => normalizeStatus(delivery.status) === "pending",
     ).length;
 
     return [
-      { label: "Today's Deliveries", value: deliveries.length },
-      { label: "Completed", value: completed },
-      { label: "Pending", value: pending },
+      { label: "Active Shipments", value: activeDeliveries.length },
+      { label: "Completed Deliveries", value: completed },
+      { label: "Pending Deliveries", value: pending },
     ];
-  }, [deliveries]);
+  }, [activeDeliveries.length, deliveries]);
 
   const markAsDelivered = async (orderId, options = {}) => {
     const { fromVoice = false } = options;
@@ -105,9 +124,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
       <section className="mb-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-3xl font-bold text-white">
-              Delivery Dashboard
-            </h2>
+            <h2 className="text-3xl font-bold text-white">Delivery Dashboard</h2>
             <p className="mt-0.5 text-slate-300">
               Welcome back, {userName}. You have {pendingCount} pending tasks.
             </p>
@@ -124,7 +141,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
               <ClipboardList size={16} />
             </div>
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              {dynamicStats[0]?.label || "Today's Deliveries"}
+              {dynamicStats[0]?.label || "Active Shipments"}
             </p>
             <p className="mt-1 text-4xl font-bold text-white">
               {dynamicStats[0]?.value ?? 0}
@@ -137,11 +154,11 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
                 <CircleCheck size={16} />
               </div>
               <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-emerald-300">
-                Target met
+                Completed
               </span>
             </div>
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              {dynamicStats[1]?.label || "Completed"}
+              {dynamicStats[1]?.label || "Completed Deliveries"}
             </p>
             <p className="mt-1 text-4xl font-bold text-white">
               {dynamicStats[1]?.value ?? 0}
@@ -158,7 +175,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
               </span>
             </div>
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              {dynamicStats[2]?.label || "Pending"}
+              {dynamicStats[2]?.label || "Pending Deliveries"}
             </p>
             <p className="mt-1 text-4xl font-bold text-white">
               {dynamicStats[2]?.value ?? 0}
@@ -182,7 +199,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
             type="button"
             className="text-sm font-medium text-cyan-300 hover:text-cyan-200"
           >
-            View all
+            {activeDeliveries.length} active
           </button>
         </div>
 
@@ -210,7 +227,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
             </tr>
           </thead>
           <tbody>
-            {deliveries.map((delivery) => (
+            {activeDeliveries.map((delivery) => (
               <tr key={delivery.order_id} className="border-t border-slate-800">
                 <td className="px-4 py-3 font-semibold text-cyan-300">
                   {delivery.order_id}
@@ -248,6 +265,13 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
                 </td>
               </tr>
             ))}
+            {activeDeliveries.length === 0 && (
+              <tr className="border-t border-slate-800">
+                <td className="px-4 py-6 text-center text-slate-400" colSpan={6}>
+                  No active shipments. Delivered orders are listed in My Deliveries.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </section>
