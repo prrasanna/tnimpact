@@ -128,7 +128,10 @@ function MyDeliveries({ theme, onToggleTheme }) {
             ))}
             {deliveredOrders.length === 0 && (
               <tr className="border-t border-slate-800">
-                <td className="px-4 py-6 text-center text-slate-400" colSpan={6}>
+                <td
+                  className="px-4 py-6 text-center text-slate-400"
+                  colSpan={6}
+                >
                   No completed deliveries yet.
                 </td>
               </tr>

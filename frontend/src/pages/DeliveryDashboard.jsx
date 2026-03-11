@@ -124,7 +124,9 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
       <section className="mb-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-3xl font-bold text-white">Delivery Dashboard</h2>
+            <h2 className="text-3xl font-bold text-white">
+              Delivery Dashboard
+            </h2>
             <p className="mt-0.5 text-slate-300">
               Welcome back, {userName}. You have {pendingCount} pending tasks.
             </p>
@@ -267,8 +269,12 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
             ))}
             {activeDeliveries.length === 0 && (
               <tr className="border-t border-slate-800">
-                <td className="px-4 py-6 text-center text-slate-400" colSpan={6}>
-                  No active shipments. Delivered orders are listed in My Deliveries.
+                <td
+                  className="px-4 py-6 text-center text-slate-400"
+                  colSpan={6}
+                >
+                  No active shipments. Delivered orders are listed in My
+                  Deliveries.
                 </td>
               </tr>
             )}
