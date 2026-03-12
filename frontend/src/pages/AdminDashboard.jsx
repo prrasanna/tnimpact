@@ -430,7 +430,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
         ),
         warehouseAssigned: updated.warehouse_assigned,
         deliveryPerson: updated.delivery_person_assigned,
-        deliveryPersonPhone: normalizePhoneNumber(updated.delivery_person_phone),
+        deliveryPersonPhone: normalizePhoneNumber(
+          updated.delivery_person_phone,
+        ),
         sourceLocation: updated.source_location,
         deliveryStartLocation: updated.delivery_start_location,
         specialInstructions: updated.special_instructions,
