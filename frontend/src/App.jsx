@@ -13,6 +13,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import WarehouseDashboard from "./pages/WarehouseDashboard";
+import WarehousePackedList from "./pages/WarehousePackedList";
 import { applyTheme, getStoredTheme } from "./utils/theme";
 
 // Main app router and global state.
@@ -50,6 +51,17 @@ function App() {
           element={
             <ProtectedRoute allowedRole="warehouse">
               <WarehouseDashboard
+                theme={theme}
+                onToggleTheme={handleToggleTheme}
+              />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/warehouse/packed"
+          element={
+            <ProtectedRoute allowedRole="warehouse">
+              <WarehousePackedList
                 theme={theme}
                 onToggleTheme={handleToggleTheme}
               />

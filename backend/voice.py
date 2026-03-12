@@ -238,6 +238,7 @@ async def process_voice_command(
                             "$set": {
                                 "status": "packed",
                                 "packed_at": datetime.utcnow(),
+                                "updated_at": datetime.utcnow(),
                             }
                         },
                     )
@@ -273,6 +274,7 @@ async def process_voice_command(
                             "$set": {
                                 "status": "delivered",
                                 "delivered_at": datetime.utcnow(),
+                                "updated_at": datetime.utcnow(),
                             }
                         },
                     )
@@ -323,6 +325,7 @@ async def process_voice_command(
                             "$set": {
                                 "status": "in_transit",
                                 "in_transit_at": datetime.utcnow(),
+                                "updated_at": datetime.utcnow(),
                             }
                         },
                     )
@@ -352,7 +355,7 @@ async def process_voice_command(
                 else:
                     update_result = await db.products.update_one(
                         {"order_id": order_id},
-                        {"$set": {"status": "pending"}},
+                        {"$set": {"status": "pending", "updated_at": datetime.utcnow()}},
                     )
                     action_performed = bool(update_result.modified_count)
                     response = (
@@ -388,7 +391,7 @@ async def process_voice_command(
                     else:
                         update_result = await db.products.update_one(
                             {"order_id": order_id},
-                            {"$set": {"destination": location}},
+                            {"$set": {"destination": location, "updated_at": datetime.utcnow()}},
                         )
                         action_performed = bool(update_result.modified_count)
                         response = (

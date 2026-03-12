@@ -75,6 +75,7 @@ class ProductOut(BaseModel):
         "failed",
     ]
     created_at: datetime
+    updated_at: Optional[datetime] = None
     packed_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
     delivery_notes: str = ""
@@ -130,6 +131,7 @@ class AdminStatsOut(BaseModel):
     total_orders: int
     pending_deliveries: int
     active_drivers: int
+    delivered_orders: int
 
 
 class AdminDashboardOut(BaseModel):

@@ -23,22 +23,33 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
 
   const navItems = [
     { label: "Dashboard", path: "/warehouse" },
-    { label: "Pick List", path: "/warehouse" },
-    { label: "Inventory", path: "/warehouse" },
-    { label: "Settings", path: "/warehouse" },
+    { label: "Packed List", path: "/warehouse/packed" },
+    { label: "Inventory", path: "/warehouse/inventory" },
+    { label: "Settings", path: "/warehouse/settings" },
   ];
 
   const [orders, setOrders] = useState([]);
+  const [packedOrdersCount, setPackedOrdersCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const loadOrders = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await warehouseAPI.getPendingProducts();
-      setOrders(Array.isArray(data) ? data : []);
+      // Calculate packed count from full dataset
+      const allOrders = Array.isArray(data) ? data : [];
+      const packedCount = allOrders.filter(order => order.status === "packed").length;
+      setPackedOrdersCount(packedCount);
+      
+      // Filter to show only active pick orders (created or picked)
+      const activeOrders = allOrders.filter(
+        order => order.status === "created" || order.status === "picked"
+      );
+      setOrders(activeOrders);
     } catch (error) {
       toast.error(error.message || "Unable to load warehouse orders");
       setOrders([]);
+      setPackedOrdersCount(0);
     } finally {
       setIsLoading(false);
     }
@@ -58,10 +69,7 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
     [orders],
   );
 
-  const packedCount = useMemo(
-    () => orders.filter((order) => order.status === "packed").length,
-    [orders],
-  );
+  const packedCount = packedOrdersCount;
 
   const markAsPicked = async (orderId) => {
     try {

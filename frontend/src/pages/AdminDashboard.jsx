@@ -10,6 +10,7 @@ const initialStats = {
   totalOrders: 0,
   pendingDeliveries: 0,
   activeDrivers: 0,
+  deliveredOrders: 0,
 };
 
 const normalizeOrderId = (value) => {
@@ -73,11 +74,27 @@ const getStatusColor = (status) => {
   }
 };
 
+const formatDateTime = (dateString) => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "N/A";
+  }
+};
+
 // Admin dashboard with product assignment form and table.
 function AdminDashboard({ theme, onToggleTheme }) {
   const navItems = [
     { label: "Dashboard", path: "/admin" },
-    { label: "Add Product", path: "/admin" },
+    { label: "Create Shipment", path: "/admin" },
     { label: "Assign Delivery", path: "/admin" },
     { label: "Manage Warehouse", path: "/admin" },
   ];
@@ -114,6 +131,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
           product.delivery_person_phone,
         ),
         status: product.status,
+        updatedAt: product.updated_at || product.created_at,
       }));
 
       setProducts(mappedProducts);
@@ -121,6 +139,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
         totalOrders: data.stats?.total_orders ?? 0,
         pendingDeliveries: data.stats?.pending_deliveries ?? 0,
         activeDrivers: data.stats?.active_drivers ?? 0,
+        deliveredOrders: data.stats?.delivered_orders ?? 0,
       });
     } catch {
       toast.error("Unable to load dashboard data from database");
@@ -147,6 +166,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
       { label: "Total Orders", value: stats.totalOrders },
       { label: "Pending Deliveries", value: stats.pendingDeliveries },
       { label: "Active Drivers", value: stats.activeDrivers },
+      { label: "Delivered Orders", value: stats.deliveredOrders },
     ],
     [stats],
   );
@@ -232,6 +252,12 @@ function AdminDashboard({ theme, onToggleTheme }) {
     }
   };
 
+  const handleViewDetails = (orderId) => {
+    toast.success(`View details for ${orderId} - Feature coming soon!`);
+    // Future: Navigate to detail page or open modal
+    // Example: navigate(`/admin/shipment/${orderId}`);
+  };
+
   return (
     <DashboardLayout
       title="Admin Dashboard"
@@ -239,7 +265,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
       theme={theme}
       onToggleTheme={onToggleTheme}
     >
-      <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {dynamicStats.map((stat) => (
           <StatCard key={stat.label} title={stat.label} value={stat.value} />
         ))}
@@ -247,7 +273,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
 
       <section className="mb-6 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
         <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
-          Add Product
+          Create Shipment
         </h2>
         <form onSubmit={handleSubmit} className="grid gap-3 md:grid-cols-2">
           <input
@@ -303,7 +329,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
             disabled={isLoading}
             className="rounded-xl bg-gradient-to-r from-blue-600 to-emerald-500 px-4 py-2 font-semibold text-white md:col-span-2"
           >
-            Add Product
+            Create Shipment
           </button>
         </form>
       </section>
@@ -325,6 +351,8 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 Delivery Person Phone Number
               </th>
               <th className="px-5 py-4 text-left font-semibold">Status</th>
+              <th className="px-5 py-4 text-left font-semibold">Last Updated</th>
+              <th className="px-5 py-4 text-center font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -355,6 +383,18 @@ function AdminDashboard({ theme, onToggleTheme }) {
                   >
                     {toTitleStatus(product.status)}
                   </span>
+                </td>
+                <td className="px-5 py-4 align-middle text-slate-300">
+                  {formatDateTime(product.updatedAt)}
+                </td>
+                <td className="px-5 py-4 align-middle text-center">
+                  <button
+                    onClick={() => handleViewDetails(product.orderId)}
+                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+                    title="View shipment details"
+                  >
+                    View Details
+                  </button>
                 </td>
               </tr>
             ))}

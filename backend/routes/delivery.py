@@ -90,6 +90,7 @@ async def mark_order_delivered(
             "$set": {
                 "status": "delivered",
                 "delivered_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
             }
         }
     )
@@ -136,7 +137,7 @@ async def update_order_status(
         )
 
     # Prepare update fields
-    update_fields = {"status": new_status}
+    update_fields = {"status": new_status, "updated_at": datetime.utcnow()}
     
     # Set timestamp based on new status
     if new_status == "delivered":

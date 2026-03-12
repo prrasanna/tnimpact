@@ -31,6 +31,7 @@ async def _create_product(payload: schemas.ProductCreate) -> dict:
         "delivery_person_phone": payload.delivery_person_phone,
         "status": "created",
         "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
         "packed_at": None,
         "delivered_at": None,
         "delivery_notes": payload.delivery_notes,
@@ -47,6 +48,7 @@ async def _create_product(payload: schemas.ProductCreate) -> dict:
 
 def _get_dashboard_stats(products: list[dict]) -> schemas.AdminStatsOut:
     pending = [product for product in products if product["status"] != "delivered"]
+    delivered = [product for product in products if product["status"] == "delivered"]
     active_drivers = {
         product["delivery_person_assigned"].strip()
         for product in pending
@@ -56,6 +58,7 @@ def _get_dashboard_stats(products: list[dict]) -> schemas.AdminStatsOut:
         total_orders=len(products),
         pending_deliveries=len(pending),
         active_drivers=len(active_drivers),
+        delivered_orders=len(delivered),
     )
 
 

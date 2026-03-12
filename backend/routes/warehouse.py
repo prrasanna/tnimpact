@@ -98,6 +98,7 @@ async def mark_order_packed(
             "$set": {
                 "status": "packed",
                 "packed_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
             }
         }
     )
@@ -134,6 +135,7 @@ async def mark_order_picked(
         {
             "$set": {
                 "status": "picked",
+                "updated_at": datetime.utcnow(),
             }
         }
     )
