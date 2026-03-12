@@ -13,6 +13,19 @@ const initialStats = {
   deliveredOrders: 0,
 };
 
+const DISTRICT_WAREHOUSE_CODES = {
+  chennai: "CHN",
+  coimbatore: "CBE",
+  dindigul: "DGL",
+  erode: "ERD",
+  madurai: "MDU",
+  salem: "SLM",
+  thanjavur: "TNJ",
+  tiruchirappalli: "TRI",
+  trichy: "TRI",
+  tirunelveli: "TNV",
+};
+
 const normalizeOrderId = (value) => {
   const digits = (value || "").replace(/\D/g, "");
   if (!digits) {
@@ -43,6 +56,20 @@ const normalizeWarehouseName = (value) => {
 
   const lastLetter = letterMatch[letterMatch.length - 1].toUpperCase();
   return `Warehouse ${lastLetter}`;
+};
+
+const getDistrictWarehouseName = (destination, fallbackWarehouse) => {
+  const normalizedDestination = (destination || "")
+    .toString()
+    .trim()
+    .toLowerCase();
+  const districtCode = DISTRICT_WAREHOUSE_CODES[normalizedDestination];
+
+  if (districtCode) {
+    return `${districtCode} Warehouse`;
+  }
+
+  return normalizeWarehouseName(fallbackWarehouse) || "-";
 };
 
 const isValidOrderId = (value) => /^ORD-\d{4,}$/.test(value);
@@ -90,6 +117,32 @@ const formatDateTime = (dateString) => {
   }
 };
 
+const formatDateTimeForInput = (dateString) => {
+  if (!dateString) return "";
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const formatFieldLabel = (key) =>
+  (key || "").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+
+const formatDetailValue = (value) => {
+  if (value === null || value === undefined || value === "") return "N/A";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return "[Object]";
+    }
+  }
+  return String(value);
+};
+
 // Admin dashboard with product assignment form and table.
 function AdminDashboard({ theme, onToggleTheme }) {
   const navItems = [
@@ -102,6 +155,16 @@ function AdminDashboard({ theme, onToggleTheme }) {
   const [products, setProducts] = useState([]);
   const [stats, setStats] = useState(initialStats);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [detailForm, setDetailForm] = useState({
+    sourceLocation: "",
+    deliveryStartLocation: "",
+    deliveryStartedAt: "",
+    deliveredAt: "",
+    specialInstructions: "",
+    deliveryNotes: "",
+  });
   const [formData, setFormData] = useState({
     productName: "",
     orderId: "",
@@ -140,16 +203,30 @@ function AdminDashboard({ theme, onToggleTheme }) {
 
       const data = await response.json();
       const mappedProducts = (data.products || []).map((product) => ({
+        id: product._id,
         productName: product.product_name,
         orderId: normalizeOrderId(product.order_id),
         destination: product.destination,
-        warehouse: normalizeWarehouseName(product.warehouse_assigned),
+        warehouse: getDistrictWarehouseName(
+          product.destination,
+          product.warehouse_assigned,
+        ),
+        warehouseAssigned: product.warehouse_assigned,
         deliveryPerson: product.delivery_person_assigned,
         deliveryPersonPhone: normalizePhoneNumber(
           product.delivery_person_phone,
         ),
+        sourceLocation: product.source_location,
+        deliveryStartLocation: product.delivery_start_location,
+        specialInstructions: product.special_instructions,
+        deliveryNotes: product.delivery_notes,
+        createdAt: product.created_at,
         status: product.status,
+        packedAt: product.packed_at,
+        deliveredAt: product.delivered_at,
+        deliveryStartedAt: product.delivery_started_at,
         updatedAt: product.updated_at || product.created_at,
+        raw: product,
       }));
 
       setProducts(mappedProducts);
@@ -197,7 +274,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
       try {
         sourceLocation = await getCurrentLocation();
       } catch (error) {
-        toast.error(error.message || "Current location is required to create shipment");
+        toast.error(
+          error.message || "Current location is required to create shipment",
+        );
         return;
       }
     }
@@ -283,11 +362,146 @@ function AdminDashboard({ theme, onToggleTheme }) {
     }
   };
 
-  const handleViewDetails = (orderId) => {
-    toast.success(`View details for ${orderId} - Feature coming soon!`);
-    // Future: Navigate to detail page or open modal
-    // Example: navigate(`/admin/shipment/${orderId}`);
+  const handleViewDetails = (order) => {
+    setSelectedOrder(order);
+    setDetailForm({
+      sourceLocation: order.sourceLocation || "",
+      deliveryStartLocation: order.deliveryStartLocation || "",
+      deliveryStartedAt: formatDateTimeForInput(order.deliveryStartedAt),
+      deliveredAt: formatDateTimeForInput(order.deliveredAt),
+      specialInstructions: order.specialInstructions || "",
+      deliveryNotes: order.deliveryNotes || "",
+    });
   };
+
+  const closeOrderDetails = () => setSelectedOrder(null);
+
+  const handleDetailFieldChange = (event) => {
+    const { name, value } = event.target;
+    setDetailForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const saveOrderDetails = async () => {
+    if (!selectedOrder?.orderId) {
+      return;
+    }
+
+    try {
+      setIsSavingDetails(true);
+      const response = await fetch(
+        `${API_BASE_URL}/admin/dashboard/update-details/${encodeURIComponent(selectedOrder.orderId)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            source_location: detailForm.sourceLocation.trim(),
+            delivery_start_location: detailForm.deliveryStartLocation.trim(),
+            delivery_started_at: detailForm.deliveryStartedAt
+              ? new Date(detailForm.deliveryStartedAt).toISOString()
+              : null,
+            delivered_at: detailForm.deliveredAt
+              ? new Date(detailForm.deliveredAt).toISOString()
+              : null,
+            special_instructions: detailForm.specialInstructions.trim(),
+            delivery_notes: detailForm.deliveryNotes.trim(),
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.detail || "Failed to update order details");
+      }
+
+      const updated = await response.json();
+      const updatedOrder = {
+        id: updated._id,
+        productName: updated.product_name,
+        orderId: normalizeOrderId(updated.order_id),
+        destination: updated.destination,
+        warehouse: getDistrictWarehouseName(
+          updated.destination,
+          updated.warehouse_assigned,
+        ),
+        warehouseAssigned: updated.warehouse_assigned,
+        deliveryPerson: updated.delivery_person_assigned,
+        deliveryPersonPhone: normalizePhoneNumber(updated.delivery_person_phone),
+        sourceLocation: updated.source_location,
+        deliveryStartLocation: updated.delivery_start_location,
+        specialInstructions: updated.special_instructions,
+        deliveryNotes: updated.delivery_notes,
+        createdAt: updated.created_at,
+        status: updated.status,
+        packedAt: updated.packed_at,
+        deliveredAt: updated.delivered_at,
+        deliveryStartedAt: updated.delivery_started_at,
+        updatedAt: updated.updated_at || updated.created_at,
+        raw: updated,
+      };
+
+      setSelectedOrder(updatedOrder);
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.orderId === updatedOrder.orderId ? updatedOrder : product,
+        ),
+      );
+      toast.success("Order details updated");
+    } catch (error) {
+      toast.error(error.message || "Unable to update order details");
+    } finally {
+      setIsSavingDetails(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedOrder) {
+      return undefined;
+    }
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        closeOrderDetails();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedOrder]);
+
+  const additionalMongoDetails = useMemo(() => {
+    if (!selectedOrder?.raw) {
+      return [];
+    }
+
+    const hiddenKeys = new Set([
+      "_id",
+      "order_id",
+      "product_name",
+      "destination",
+      "warehouse_assigned",
+      "delivery_person_assigned",
+      "delivery_person_phone",
+      "status",
+      "created_at",
+      "updated_at",
+      "packed_at",
+      "delivered_at",
+      "delivery_started_at",
+      "source_location",
+      "delivery_start_location",
+      "special_instructions",
+      "delivery_notes",
+    ]);
+
+    return Object.entries(selectedOrder.raw).filter(
+      ([key, value]) => !hiddenKeys.has(key) && value !== undefined,
+    );
+  }, [selectedOrder]);
 
   return (
     <DashboardLayout
@@ -309,17 +523,17 @@ function AdminDashboard({ theme, onToggleTheme }) {
         <form onSubmit={handleSubmit} className="grid gap-3 md:grid-cols-2">
           <input
             required
-            name="productName"
-            placeholder="Product Name"
-            value={formData.productName}
+            name="orderId"
+            placeholder="Order ID "
+            value={formData.orderId}
             onChange={handleChange}
             className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           />
           <input
             required
-            name="orderId"
-            placeholder="Order ID (ORD-1001)"
-            value={formData.orderId}
+            name="productName"
+            placeholder="Product Name"
+            value={formData.productName}
             onChange={handleChange}
             className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           />
@@ -334,7 +548,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
           <input
             required
             name="warehouse"
-            placeholder="Assign Warehouse (Warehouse A)"
+            placeholder="Assign Warehouse"
             value={formData.warehouse}
             onChange={handleChange}
             className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
@@ -377,7 +591,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 setFormData((prev) => ({ ...prev, sourceLocation: location }));
                 toast.success("Current location captured");
               } catch (error) {
-                toast.error(error.message || "Unable to capture current location");
+                toast.error(
+                  error.message || "Unable to capture current location",
+                );
               }
             }}
             className="rounded-xl border border-cyan-500 px-4 py-2 font-semibold text-cyan-300 hover:bg-cyan-500/10"
@@ -391,18 +607,12 @@ function AdminDashboard({ theme, onToggleTheme }) {
         <table className="min-w-full table-auto text-sm text-slate-200">
           <thead className="bg-slate-900 text-slate-300">
             <tr>
+              <th className="px-5 py-4 text-left font-semibold">Order ID</th>
               <th className="px-5 py-4 text-left font-semibold">
                 Product Name
               </th>
-              <th className="px-5 py-4 text-left font-semibold">Order ID</th>
               <th className="px-5 py-4 text-left font-semibold">Destination</th>
               <th className="px-5 py-4 text-left font-semibold">Warehouse</th>
-              <th className="px-5 py-4 text-left font-semibold">
-                Delivery Person
-              </th>
-              <th className="px-5 py-4 text-left font-semibold">
-                Delivery Person Phone Number
-              </th>
               <th className="px-5 py-4 text-left font-semibold">Status</th>
               <th className="px-5 py-4 text-left font-semibold">
                 Last Updated
@@ -416,22 +626,16 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 key={`${product.orderId}-${index}`}
                 className="border-t border-slate-800 text-slate-100"
               >
-                <td className="px-5 py-4 align-middle">
-                  {product.productName}
-                </td>
                 <td className="px-5 py-4 align-middle font-medium text-cyan-300">
                   {product.orderId}
+                </td>
+                <td className="px-5 py-4 align-middle">
+                  {product.productName}
                 </td>
                 <td className="px-5 py-4 align-middle">
                   {product.destination}
                 </td>
                 <td className="px-5 py-4 align-middle">{product.warehouse}</td>
-                <td className="px-5 py-4 align-middle">
-                  {product.deliveryPerson}
-                </td>
-                <td className="px-5 py-4 align-middle">
-                  {product.deliveryPersonPhone}
-                </td>
                 <td className="px-5 py-4 align-middle">
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(product.status)}`}
@@ -444,7 +648,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 </td>
                 <td className="px-5 py-4 align-middle text-center">
                   <button
-                    onClick={() => handleViewDetails(product.orderId)}
+                    onClick={() => handleViewDetails(product)}
                     className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
                     title="View shipment details"
                   >
@@ -453,9 +657,258 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 </td>
               </tr>
             ))}
+            {products.length === 0 && (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-5 py-8 text-center text-slate-400"
+                >
+                  {isLoading ? "Loading orders..." : "No orders found"}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </section>
+
+      {selectedOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-5 text-slate-100 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-semibold">Order Details</h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  Complete shipment information from MongoDB.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeOrderDetails}
+                className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Product Name
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDetailValue(selectedOrder.productName)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Order ID
+                </p>
+                <p className="mt-1 font-medium text-cyan-300">
+                  {formatDetailValue(selectedOrder.orderId)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Destination
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDetailValue(selectedOrder.destination)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Warehouse
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDetailValue(selectedOrder.warehouse)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivery Person Name
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDetailValue(selectedOrder.deliveryPerson)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivery Person Phone Number
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDetailValue(selectedOrder.deliveryPersonPhone)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Order Status
+                </p>
+                <p className="mt-1 font-medium">
+                  {toTitleStatus(selectedOrder.status)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Last Updated
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDateTime(selectedOrder.updatedAt)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Created At
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDateTime(selectedOrder.createdAt)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Packed At
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDateTime(selectedOrder.packedAt)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivery Started At
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDateTime(selectedOrder.deliveryStartedAt)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivered At
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDateTime(selectedOrder.deliveredAt)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3 sm:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Source Location
+                </p>
+                <input
+                  type="text"
+                  name="sourceLocation"
+                  value={detailForm.sourceLocation}
+                  onChange={handleDetailFieldChange}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Enter source location"
+                />
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3 sm:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivery Start Location
+                </p>
+                <input
+                  type="text"
+                  name="deliveryStartLocation"
+                  value={detailForm.deliveryStartLocation}
+                  onChange={handleDetailFieldChange}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Enter delivery start location"
+                />
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivery Started At
+                </p>
+                <input
+                  type="datetime-local"
+                  name="deliveryStartedAt"
+                  value={detailForm.deliveryStartedAt}
+                  onChange={handleDetailFieldChange}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivered At
+                </p>
+                <input
+                  type="datetime-local"
+                  name="deliveredAt"
+                  value={detailForm.deliveredAt}
+                  onChange={handleDetailFieldChange}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3 sm:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Special Instructions
+                </p>
+                <textarea
+                  name="specialInstructions"
+                  value={detailForm.specialInstructions}
+                  onChange={handleDetailFieldChange}
+                  rows={3}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Enter special instructions"
+                />
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3 sm:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivery Notes
+                </p>
+                <textarea
+                  name="deliveryNotes"
+                  value={detailForm.deliveryNotes}
+                  onChange={handleDetailFieldChange}
+                  rows={3}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Enter delivery notes"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={saveOrderDetails}
+                disabled={isSavingDetails}
+                className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingDetails ? "Saving..." : "Save Details"}
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <h4 className="text-sm font-semibold text-slate-200">
+                Additional MongoDB Details
+              </h4>
+              {additionalMongoDetails.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-400">
+                  No additional fields available.
+                </p>
+              ) : (
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {additionalMongoDetails.map(([key, value]) => (
+                    <div
+                      key={key}
+                      className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2"
+                    >
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        {formatFieldLabel(key)}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-200">
+                        {formatDetailValue(value)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

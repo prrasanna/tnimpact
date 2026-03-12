@@ -89,6 +89,17 @@ class ProductOut(BaseModel):
         populate_by_name = True
 
 
+class ProductAdminDetailsUpdate(BaseModel):
+    """Schema for admin updates to order detail fields."""
+
+    source_location: Optional[str] = None
+    delivery_start_location: Optional[str] = None
+    delivery_started_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    special_instructions: Optional[str] = None
+    delivery_notes: Optional[str] = None
+
+
 class VoiceCommandRequest(BaseModel):
     """Schema for processing free-form voice commands.
     

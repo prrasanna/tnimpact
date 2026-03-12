@@ -111,3 +111,32 @@ async def add_dashboard_product(payload: schemas.ProductCreate):
     """Add product for admin dashboard flow without auth token dependency."""
     product = await _create_product(payload=payload)
     return schemas.ProductOut(**product)
+
+
+@router.put("/dashboard/update-details/{order_id}", response_model=schemas.ProductOut)
+async def update_dashboard_product_details(
+    order_id: str,
+    payload: schemas.ProductAdminDetailsUpdate,
+):
+    """Update admin-managed detail fields for an order."""
+    db = get_database()
+    existing = await db.products.find_one({"order_id": order_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    payload_data = payload.model_dump(exclude_unset=True)
+    update_fields = {
+        key: value
+        for key, value in payload_data.items()
+        if value is not None
+    }
+    update_fields["updated_at"] = datetime.utcnow()
+
+    await db.products.update_one(
+        {"order_id": order_id},
+        {"$set": update_fields},
+    )
+
+    updated = await db.products.find_one({"order_id": order_id})
+    updated["_id"] = str(updated["_id"])
+    return schemas.ProductOut(**updated)
