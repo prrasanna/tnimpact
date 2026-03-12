@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -15,7 +15,12 @@ from routes.admin import router as admin_router
 from routes.delivery import router as delivery_router
 from routes.dispatcher import router as dispatcher_router
 from routes.warehouse import router as warehouse_router
-from voice import listen_command, process_voice_command, speak_text
+from voice import (
+    listen_command,
+    process_voice_command,
+    speak_text,
+    synthesize_tts_mp3_bytes,
+)
 
 # Configure basic application logging.
 logging.basicConfig(
@@ -95,6 +100,7 @@ async def handle_voice_command(
         command=payload.command,
         user_role=current_user["role"],
         user_name=current_user["name"],
+        current_location=payload.current_location,
     )
 
 
@@ -110,8 +116,18 @@ async def handle_voice_command_legacy(
 @app.post("/voice/speak")
 def speak(payload: schemas.SpeakRequest):
     """Manually speak any provided text."""
-    speak_text(payload.command, language="en")
+    speak_text(payload.command, language=payload.language)
     return {"status": "spoken"}
+
+
+@app.post("/voice/tts")
+def synthesize_tts(payload: schemas.SpeakRequest):
+    """Return synthesized speech audio (MP3) for frontend playback."""
+    audio_bytes = synthesize_tts_mp3_bytes(
+        text=payload.command,
+        language=payload.language,
+    )
+    return Response(content=audio_bytes, media_type="audio/mpeg")
 
 
 # Phase 2: Context Management Endpoints

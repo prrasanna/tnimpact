@@ -138,6 +138,11 @@ async def update_order_status(
 
     # Prepare update fields
     update_fields = {"status": new_status, "updated_at": datetime.utcnow()}
+
+    if new_status == "out_for_delivery":
+        update_fields["delivery_started_at"] = datetime.utcnow()
+        if status_update.current_location:
+            update_fields["delivery_start_location"] = status_update.current_location
     
     # Set timestamp based on new status
     if new_status == "delivered":

@@ -50,6 +50,7 @@ class ProductCreate(BaseModel):
     warehouse_assigned: str
     delivery_person_assigned: str
     delivery_person_phone: str
+    source_location: str = ""
     special_instructions: str = ""
     delivery_notes: str = ""
 
@@ -64,6 +65,9 @@ class ProductOut(BaseModel):
     warehouse_assigned: str
     delivery_person_assigned: str
     delivery_person_phone: str
+    source_location: str = ""
+    delivery_start_location: str = ""
+    delivery_started_at: Optional[datetime] = None
     status: Literal[
         "created",
         "picked",
@@ -93,6 +97,7 @@ class VoiceCommandRequest(BaseModel):
     """
 
     command: str
+    current_location: str = ""
 
 
 class VoiceCommandResponse(BaseModel):
@@ -108,6 +113,7 @@ class SpeakRequest(BaseModel):
     """Schema for simple text-to-speech endpoint."""
 
     command: str
+    language: str = "en"
 
 
 class StatusUpdate(BaseModel):
@@ -123,6 +129,7 @@ class StatusUpdate(BaseModel):
         "returned",
         "failed",
     ]
+    current_location: str = ""
 
 
 class AdminStatsOut(BaseModel):

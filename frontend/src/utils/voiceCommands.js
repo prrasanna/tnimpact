@@ -11,9 +11,9 @@ const askClarification = () =>
 const extractOrderId = (command) => {
   const normalized = command.replace(/\s+/g, " ").trim();
 
-  // Handles formats like: ORD-1003, ORD1003, ord 1003, order 1003, 1003.
+  // Handles formats like: ORD-1003, ORD1003, ord 1003, order 1003, 1003, audio 1003, audi 1003
   const match = normalized.match(
-    /(ORD\s*-?\s*\d+|order\s*(id|number|no)?\s*-?\s*\d+|\b\d{2,}\b)/i,
+    /(ORD\s*-?\s*\d+|order\s*(id|number|no)?\s*-?\s*\d+|audio\s*-?\s*\d+|audi\s*-?\s*\d+|\b\d{2,}\b)/i,
   );
   if (!match) {
     return null;
@@ -46,6 +46,35 @@ const isPackingIntent = (text) =>
     "packing mudinjudhu",
     "packing complete",
     "set packed",
+    // Common speech recognition errors
+    "pact",
+    "pat",
+    "mark has packed",
+    "mark is packed",
+    "mac as packed",
+    "mak as packed",
+  ]);
+
+const isPickedIntent = (text) =>
+  hasAny(text, [
+    "pick",
+    "picked",
+    "mark as picked",
+    "mark picked",
+    "pick pannunga",
+    "picked aagiduchu",
+    "picked aagiduchi",
+    "picked aachu",
+    "picking mudinjudhu",
+    "picking complete",
+    "set picked",
+    // Common speech recognition errors
+    "pic",
+    "pik",
+    "mark has picked",
+    "mark is picked",
+    "mac as picked",
+    "mak as picked",
   ]);
 
 const isDeliveredIntent = (text) =>
@@ -66,6 +95,43 @@ const isDeliveredIntent = (text) =>
     "delivered pannunga",
     "set delivered",
     "done delivery",
+    // Common speech recognition errors
+    "deliverd",
+    "delievered",
+    "dilivered",
+    "mark has delivered",
+    "mark is delivered",
+    "mac as delivered",
+    "mak as delivered",
+  ]);
+
+const isShippedIntent = (text) =>
+  hasAny(text, [
+    "shipped",
+    "ship",
+    "mark shipped",
+    "mark as shipped",
+    "out for delivery",
+    "mark out for delivery",
+    "send for delivery",
+    "dispatch",
+    "dispatched",
+    // Common speech recognition errors
+    "shift",
+    "sheep",
+    "ship it",
+    "mark has shipped",
+    "mark is shipped",
+    "mac as shipped",
+    "mak as shipped",
+    "start delivery",
+    "begin delivery",
+    "start the delivery",
+    "begin the delivery",
+    "send for delivery",
+    "move for delivery",
+    "dispatch order",
+    "dispatch this order",
   ]);
 
 const isStatusIntent = (text) =>

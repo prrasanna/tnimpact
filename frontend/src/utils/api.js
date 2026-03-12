@@ -105,10 +105,10 @@ export const deliveryAPI = {
   },
 
   // Update order status
-  updateStatus: async (orderId, status) => {
+  updateStatus: async (orderId, status, currentLocation = "") => {
     return apiRequest(`/delivery/update-status/${orderId}`, {
       method: "PUT",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, current_location: currentLocation }),
     });
   },
 };
@@ -129,11 +129,30 @@ export const dispatcherAPI = {
 // Unified voice API calls
 export const voiceAPI = {
   // Process command in backend (Phase 2: user info from JWT token)
-  processCommand: async ({ command }) => {
+  processCommand: async ({ command, currentLocation = "" }) => {
     return apiRequest("/voice/command", {
       method: "POST",
-      body: JSON.stringify({ command }),
+      body: JSON.stringify({ command, current_location: currentLocation }),
     });
+  },
+
+  // Synthesize speech audio as MP3 blob for reliable multilingual playback.
+  synthesizeSpeech: async ({ command, language = "en" }) => {
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(`${API_BASE_URL}/voice/tts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify({ command, language }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to synthesize speech: HTTP ${response.status}`);
+    }
+
+    return response.blob();
   },
 };
 

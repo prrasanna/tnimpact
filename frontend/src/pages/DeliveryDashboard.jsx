@@ -18,6 +18,27 @@ const normalizeStatus = (status) =>
 const isPendingDelivery = (status) =>
   ["pending", "packed", "out_for_delivery"].includes(normalizeStatus(status));
 
+const parseCoordinates = (value) => {
+  if (!value || typeof value !== "string") return null;
+  const parts = value.split(",").map((part) => part.trim());
+  if (parts.length !== 2) return null;
+
+  const lat = Number(parts[0]);
+  const lon = Number(parts[1]);
+  if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { lat, lon };
+};
+
+const buildOsmEmbedUrl = ({ lat, lon }) => {
+  const delta = 0.01;
+  const left = lon - delta;
+  const right = lon + delta;
+  const top = lat + delta;
+  const bottom = lat - delta;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${lat}%2C${lon}`;
+};
+
 // Delivery dashboard powered by backend delivery endpoints.
 function DeliveryDashboard({ theme, onToggleTheme }) {
   const currentUser = getCurrentUser();
@@ -95,9 +116,36 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
     }
   };
 
+  const getCurrentLocation = () =>
+    new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser"));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          resolve(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        },
+        () => reject(new Error("Unable to access your current location")),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      );
+    });
+
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      await deliveryAPI.updateStatus(orderId, newStatus);
+      let currentLocation = "";
+      if (newStatus === "out_for_delivery") {
+        try {
+          currentLocation = await getCurrentLocation();
+        } catch (error) {
+          toast.error(error.message || "Current location is required to start delivery");
+          return;
+        }
+      }
+
+      await deliveryAPI.updateStatus(orderId, newStatus, currentLocation);
       await loadDeliveries();
 
       if (newStatus === "out_for_delivery") {
@@ -138,9 +186,29 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
   };
 
   const handleVoiceCommand = async (command) => {
+    const normalized = (command || "").toLowerCase();
+    const isStartDeliveryVoiceIntent =
+      normalized.includes("start delivery") ||
+      normalized.includes("start deliver") ||
+      normalized.includes("begin delivery") ||
+      normalized.includes("send for delivery") ||
+      normalized.includes("ship") ||
+      normalized.includes("shipped");
+
+    let currentLocation = "";
+    if (isStartDeliveryVoiceIntent) {
+      try {
+        currentLocation = await getCurrentLocation();
+      } catch (error) {
+        toast.error(error.message || "Current location is required to start delivery");
+        return "Unable to start delivery without current location.";
+      }
+    }
+
     // Phase 2: Backend now gets user info from JWT token
     const result = await voiceAPI.processCommand({
       command,
+      currentLocation,
     });
 
     // Reload deliveries if action was performed (order marked delivered, etc.)
@@ -152,6 +220,17 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
   };
 
   const pendingCount = dynamicStats[2]?.value ?? 0;
+  const activeMapOrder = useMemo(
+    () =>
+      activeDeliveries.find(
+        (delivery) => normalizeStatus(delivery.status) === "out_for_delivery",
+      ) || null,
+    [activeDeliveries],
+  );
+  const activeMapCoords = useMemo(
+    () => parseCoordinates(activeMapOrder?.source_location || ""),
+    [activeMapOrder],
+  );
   const userName = currentUser?.name || "Delivery User";
   const userEmail = currentUser?.email || "";
   const userRole = currentUser?.role || "Delivery Person";
@@ -330,6 +409,31 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
           </tbody>
         </table>
       </section>
+
+      {activeMapOrder && (
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-950 p-4">
+          <h3 className="text-xl font-semibold text-white">
+            Customer GPS Map ({activeMapOrder.order_id})
+          </h3>
+          <p className="mt-1 text-sm text-slate-300">
+            Customer Location: {activeMapOrder.source_location || "Not captured"}
+          </p>
+          {activeMapCoords ? (
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-700">
+              <iframe
+                title="Customer GPS Map"
+                src={buildOsmEmbedUrl(activeMapCoords)}
+                className="h-80 w-full"
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+              Exact customer GPS is not available for this order.
+            </div>
+          )}
+        </section>
+      )}
     </DashboardLayout>
   );
 }

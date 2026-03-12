@@ -1,6 +1,7 @@
 """Voice input/output and command  processing utilities."""
 
 import logging
+import io
 import os
 import re
 import subprocess
@@ -56,6 +57,22 @@ def speak_text(text: str, language: str = "en") -> None:
         engine.runAndWait()
     except Exception as exc:
         logger.error("Text-to-speech failed: %s", exc)
+
+
+def synthesize_tts_mp3_bytes(text: str, language: str = "en") -> bytes:
+    """Generate MP3 audio bytes for frontend playback.
+
+    Uses gTTS so the frontend can play reliable Tamil audio even when browser
+    speech synthesis lacks Tamil voices.
+    """
+    lang = (language or "en").strip().lower()
+    if lang not in {"en", "ta"}:
+        lang = "en"
+
+    audio_buffer = io.BytesIO()
+    tts = gTTS(text=text, lang=lang)
+    tts.write_to_fp(audio_buffer)
+    return audio_buffer.getvalue()
 
 
 def listen_command(timeout: int = 5, phrase_time_limit: int = 8) -> str:
@@ -116,6 +133,7 @@ def _intent_from_text(normalized_command: str) -> str:
     """Map free-form command text to supported backend intents.
     
     Phase 2: Enhanced patterns for context-aware commands.
+    Now supports flexible word order.
     """
     # Track order queries
     if "track order" in normalized_command or "track it" in normalized_command:
@@ -129,10 +147,51 @@ def _intent_from_text(normalized_command: str) -> str:
         return "track_order"
     
     # Mark status changes (Phase 2: support multiple statuses)
-    if "mark" in normalized_command:
-        if "packed" in normalized_command:
+    # Check for action/status keywords regardless of word order.
+    has_mark_keyword = any(
+        word in normalized_command
+        for word in ["mark", "set", "update", "start", "begin", "move", "send"]
+    )
+    has_shipping_phrase = any(
+        phrase in normalized_command
+        for phrase in [
+            "start delivery",
+            "begin delivery",
+            "start the delivery",
+            "begin the delivery",
+            "send for delivery",
+            "out for delivery",
+            "start shipment",
+            "dispatch",
+            "start trip",
+        ]
+    )
+
+    # Force shipping intent first for phrases like "start deliver".
+    if has_shipping_phrase or re.search(r"\b(start|begin|send|move)\s+(the\s+)?deliver(y|)\b", normalized_command):
+        return "mark_shipped"
+
+    if has_mark_keyword or any(
+        status in normalized_command
+        for status in ["picked", "packed", "delivered", "shipped", "dispatch", "delivery"]
+    ):
+        if "picked" in normalized_command or "pick" in normalized_command:
+            return "mark_picked"
+        elif "packed" in normalized_command or "pack" in normalized_command:
             return "mark_packed"
-        elif "delivered" in normalized_command:
+        elif (
+            "shipped" in normalized_command
+            or "out for delivery" in normalized_command
+            or "start delivery" in normalized_command
+            or "begin delivery" in normalized_command
+            or "send for delivery" in normalized_command
+            or "dispatch" in normalized_command
+        ):
+            return "mark_shipped"
+        elif (
+            "delivered" in normalized_command
+            or re.search(r"\bmark\s+(as\s+)?deliver(ed)?\b", normalized_command)
+        ):
             return "mark_delivered"
         elif "transit" in normalized_command or "in transit" in normalized_command:
             return "mark_in_transit"
@@ -177,6 +236,7 @@ async def process_voice_command(
     command: str,
     user_role: str,
     user_name: str | None = None,
+    current_location: str = "",
 ) -> dict:
     """Parse a voice command, execute DB actions, and return structured response.
     
@@ -202,15 +262,15 @@ async def process_voice_command(
     try:
         if intent == "track_order":
             if not order_id:
-                response = "I could not find an order ID in your command."
+                response = "உங்க கமாண்டில் ஆர்டர் ஐடி கிடைக்கவில்லை.\nI could not find an order ID in your command."
             else:
                 order = await db.products.find_one({"order_id": order_id})
                 if not order:
-                    response = f"Order {order_id} was not found."
+                    response = f"ஆர்டர் {order_id} கிடைக்கவில்லை.\nOrder {order_id} was not found."
                 else:
                     response = (
-                        f"Order {order_id} is currently {order['status']} and is headed to "
-                        f"{order['destination']}."
+                        f"ஆர்டர் {order_id} தற்போது {order['status']} ஸ்டேட்டஸில் இருக்கிறது மற்றும் {order['destination']} க்கு செல்கிறது.\n"
+                        f"Order {order_id} is currently {order['status']} and is headed to {order['destination']}."
                     )
                     # Phase 2: Save order context
                     ctx_manager.update_context(actor_name, {
@@ -220,17 +280,52 @@ async def process_voice_command(
                     })
                     context_updated = True
 
-        elif intent == "mark_packed":
+        elif intent == "mark_picked":
             if user_role not in {"warehouse", "admin"}:
-                response = "Only warehouse or admin users can mark orders as packed."
+                response = "வெர்ஹவுஸ் அல்லது அட்மின் யூசர்ஸ் மட்டுமே ஆர்டரை பிக்கட் என மார்க் செய்ய முடியும்.\nOnly warehouse or admin users can mark orders as picked."
             elif not order_id:
-                response = "I could not find an order ID in your command."
+                response = "உங்க கமாண்டில் ஆர்டர் ஐடி கிடைக்கவில்லை.\nI could not find an order ID in your command."
             else:
                 order = await db.products.find_one({"order_id": order_id})
                 if not order:
-                    response = f"Order {order_id} was not found."
+                    response = f"ஆர்டர் {order_id} கிடைக்கவில்லை.\nOrder {order_id} was not found."
                 elif order["status"] != "created":
-                    response = f"Order {order_id} cannot be packed from status {order['status']}."
+                    response = f"ஆர்டர் {order_id} ஐ {order['status']} ஸ்டேட்டஸிலிருந்து பிக்கட் என மார்க் செய்ய முடியாது.\nOrder {order_id} cannot be marked as picked from status {order['status']}."
+                else:
+                    update_result = await db.products.update_one(
+                        {"order_id": order_id},
+                        {
+                            "$set": {
+                                "status": "picked",
+                                "updated_at": datetime.utcnow(),
+                            }
+                        },
+                    )
+                    action_performed = bool(update_result.modified_count)
+                    response = (
+                        f"ஆர்டர் {order_id} பிக்கட் என மார்க் செய்யப்பட்டது.\nOrder {order_id} marked as picked."
+                        if action_performed
+                        else f"ஆர்டர் {order_id} க்கு எந்த அப்டேட்டும் செய்யப்படவில்லை.\nNo update applied for order {order_id}."
+                    )
+                    # Update context
+                    if action_performed:
+                        ctx_manager.update_context(actor_name, {
+                            "last_order_id": order_id,
+                            "last_status": "picked",
+                        })
+                        context_updated = True
+
+        elif intent == "mark_packed":
+            if user_role not in {"warehouse", "admin"}:
+                response = "வெர்ஹவுஸ் அல்லது அட்மின் யூசர்ஸ் மட்டுமே ஆர்டரை பேக்டு என மார்க் செய்ய முடியும்.\nOnly warehouse or admin users can mark orders as packed."
+            elif not order_id:
+                response = "உங்க கமாண்டில் ஆர்டர் ஐடி கிடைக்கவில்லை.\nI could not find an order ID in your command."
+            else:
+                order = await db.products.find_one({"order_id": order_id})
+                if not order:
+                    response = f"ஆர்டர் {order_id} கிடைக்கவில்லை.\nOrder {order_id} was not found."
+                elif order["status"] not in {"created", "picked"}:
+                    response = f"ஆர்டர் {order_id} ஐ {order['status']} ஸ்டேட்டஸிலிருந்து பேக்டு என மார்க் செய்ய முடியாது.\nOrder {order_id} cannot be packed from status {order['status']}."
                 else:
                     update_result = await db.products.update_one(
                         {"order_id": order_id},
@@ -244,9 +339,9 @@ async def process_voice_command(
                     )
                     action_performed = bool(update_result.modified_count)
                     response = (
-                        f"Order {order_id} marked as packed."
+                        f"ஆர்டர் {order_id} பேக்டு என மார்க் செய்யப்பட்டது.\nOrder {order_id} marked as packed."
                         if action_performed
-                        else f"No update applied for order {order_id}."
+                        else f"ஆர்டர் {order_id} க்கு எந்த அப்டேட்டும் செய்யப்படவில்லை.\nNo update applied for order {order_id}."
                     )
                     # Update context
                     if action_performed:
@@ -258,15 +353,15 @@ async def process_voice_command(
 
         elif intent == "mark_delivered":
             if user_role not in {"delivery", "admin"}:
-                response = "Only delivery or admin users can mark orders as delivered."
+                response = "டெலிவரி அல்லது அட்மின் யூசர்ஸ் மட்டுமே ஆர்டரை டெலிவர்டு என மார்க் செய்ய முடியும்.\nOnly delivery or admin users can mark orders as delivered."
             elif not order_id:
-                response = "I could not find an order ID in your command."
+                response = "உங்க கமாண்டில் ஆர்டர் ஐடி கிடைக்கவில்லை.\nI could not find an order ID in your command."
             else:
                 order = await db.products.find_one({"order_id": order_id})
                 if not order:
-                    response = f"Order {order_id} was not found."
+                    response = f"ஆர்டர் {order_id} கிடைக்கவில்லை.\nOrder {order_id} was not found."
                 elif order["status"] not in {"packed", "out_for_delivery"}:
-                    response = f"Order {order_id} cannot be delivered from status {order['status']}."
+                    response = f"ஆர்டர் {order_id} ஐ {order['status']} ஸ்டேட்டஸிலிருந்து டெலிவர்டு என மார்க் செய்ய முடியாது.\nOrder {order_id} cannot be delivered from status {order['status']}."
                 else:
                     update_result = await db.products.update_one(
                         {"order_id": order_id},
@@ -280,15 +375,56 @@ async def process_voice_command(
                     )
                     action_performed = bool(update_result.modified_count)
                     response = (
-                        f"Order {order_id} marked as delivered."
+                        f"ஆர்டர் {order_id} டெலிவர்டு என மார்க் செய்யப்பட்டது.\nOrder {order_id} marked as delivered."
                         if action_performed
-                        else f"No update applied for order {order_id}."
+                        else f"ஆர்டர் {order_id} க்கு எந்த அப்டேட்டும் செய்யப்படவில்லை.\nNo update applied for order {order_id}."
                     )
                     # Update context
                     if action_performed:
                         ctx_manager.update_context(actor_name, {
                             "last_order_id": order_id,
                             "last_status": "delivered",
+                        })
+                        context_updated = True
+
+        elif intent == "mark_shipped":
+            if user_role not in {"delivery", "admin", "dispatcher"}:
+                response = "டெலிவரி, டிஸ்பேச்சர் அல்லது அட்மின் யூசர்ஸ் மட்டுமே ஆர்டரை ஷிப்புடு என மார்க் செய்ய முடியும்.\nOnly delivery, dispatcher, or admin users can mark orders as shipped."
+            elif not order_id:
+                response = "உங்க கமாண்டில் ஆர்டர் ஐடி கிடைக்கவில்லை.\nI could not find an order ID in your command."
+            else:
+                order = await db.products.find_one({"order_id": order_id})
+                if not order:
+                    response = f"ஆர்டர் {order_id} கிடைக்கவில்லை.\nOrder {order_id} was not found."
+                elif order["status"] not in {"packed", "picked"}:
+                    response = f"ஆர்டர் {order_id} ஐ {order['status']} ஸ்டேட்டஸிலிருந்து ஷிப்புடு என மார்க் செய்ய முடியாது.\nOrder {order_id} cannot be marked as shipped from status {order['status']}."
+                else:
+                    destination = order.get("destination", "Unknown location")
+                    update_fields = {
+                        "status": "out_for_delivery",
+                        "updated_at": datetime.utcnow(),
+                    }
+                    if current_location:
+                        update_fields["delivery_start_location"] = current_location
+                    update_fields["delivery_started_at"] = datetime.utcnow()
+
+                    update_result = await db.products.update_one(
+                        {"order_id": order_id},
+                        {"$set": update_fields},
+                    )
+                    action_performed = bool(update_result.modified_count)
+                    response = (
+                        f"ஆர்டர் {order_id} ஷிப்புடு என மார்க் செய்யப்பட்டு டெலிவரிக்கு அனுப்பப்பட்டது. கஸ்டமர் லொக்கேஷன்: {destination}.\n"
+                        f"Order {order_id} marked as shipped and out for delivery. Customer location: {destination}."
+                        if action_performed
+                        else f"ஆர்டர் {order_id} க்கு எந்த அப்டேட்டும் செய்யப்படவில்லை.\nNo update applied for order {order_id}."
+                    )
+                    # Update context
+                    if action_performed:
+                        ctx_manager.update_context(actor_name, {
+                            "last_order_id": order_id,
+                            "last_status": "out_for_delivery",
+                            "last_location": destination,
                         })
                         context_updated = True
 

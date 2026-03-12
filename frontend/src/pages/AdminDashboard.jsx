@@ -109,7 +109,25 @@ function AdminDashboard({ theme, onToggleTheme }) {
     warehouse: "",
     deliveryPerson: "",
     deliveryPersonPhone: "",
+    sourceLocation: "",
   });
+
+  const getCurrentLocation = () =>
+    new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser"));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          resolve(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        },
+        () => reject(new Error("Location access denied or unavailable")),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      );
+    });
 
   const loadDashboardData = async () => {
     try {
@@ -174,6 +192,16 @@ function AdminDashboard({ theme, onToggleTheme }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    let sourceLocation = formData.sourceLocation.trim();
+    if (!sourceLocation) {
+      try {
+        sourceLocation = await getCurrentLocation();
+      } catch (error) {
+        toast.error(error.message || "Current location is required to create shipment");
+        return;
+      }
+    }
+
     const payload = {
       productName: formData.productName.trim(),
       orderId: normalizeOrderId(formData.orderId),
@@ -181,6 +209,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
       warehouse: normalizeWarehouseName(formData.warehouse),
       deliveryPerson: formData.deliveryPerson.trim(),
       deliveryPersonPhone: normalizePhoneNumber(formData.deliveryPersonPhone),
+      sourceLocation,
     };
 
     if (!payload.productName) {
@@ -228,6 +257,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
             warehouse_assigned: payload.warehouse,
             delivery_person_assigned: payload.deliveryPerson,
             delivery_person_phone: payload.deliveryPersonPhone,
+            source_location: payload.sourceLocation,
           }),
         },
       );
@@ -244,6 +274,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
         warehouse: "",
         deliveryPerson: "",
         deliveryPersonPhone: "",
+        sourceLocation: "",
       });
       toast.success("Product added successfully");
       await loadDashboardData();
@@ -324,12 +355,34 @@ function AdminDashboard({ theme, onToggleTheme }) {
             onChange={handleChange}
             className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           />
+          <input
+            name="sourceLocation"
+            placeholder="Current Location (Auto-captured if empty)"
+            value={formData.sourceLocation}
+            onChange={handleChange}
+            className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          />
           <button
             type="submit"
             disabled={isLoading}
-            className="rounded-xl bg-gradient-to-r from-blue-600 to-emerald-500 px-4 py-2 font-semibold text-white md:col-span-2"
+            className="rounded-xl bg-gradient-to-r from-blue-600 to-emerald-500 px-4 py-2 font-semibold text-white"
           >
             Create Shipment
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const location = await getCurrentLocation();
+                setFormData((prev) => ({ ...prev, sourceLocation: location }));
+                toast.success("Current location captured");
+              } catch (error) {
+                toast.error(error.message || "Unable to capture current location");
+              }
+            }}
+            className="rounded-xl border border-cyan-500 px-4 py-2 font-semibold text-cyan-300 hover:bg-cyan-500/10"
+          >
+            Use My Current Location
           </button>
         </form>
       </section>
