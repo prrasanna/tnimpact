@@ -27,8 +27,8 @@ function WarehousePackedList({ theme, onToggleTheme }) {
       setIsLoading(true);
       const data = await warehouseAPI.getPendingProducts();
       // Filter to show only packed orders
-      const packed = Array.isArray(data) 
-        ? data.filter(order => order.status === "packed")
+      const packed = Array.isArray(data)
+        ? data.filter((order) => order.status === "packed")
         : [];
       setPackedOrders(packed);
     } catch (error) {
@@ -83,7 +83,9 @@ function WarehousePackedList({ theme, onToggleTheme }) {
 
       <section className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
         <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-          <h3 className="text-xl font-semibold text-white">Packed Orders List</h3>
+          <h3 className="text-xl font-semibold text-white">
+            Packed Orders List
+          </h3>
           <button
             type="button"
             onClick={loadPackedOrders}

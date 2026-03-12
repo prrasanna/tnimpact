@@ -351,7 +351,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 Delivery Person Phone Number
               </th>
               <th className="px-5 py-4 text-left font-semibold">Status</th>
-              <th className="px-5 py-4 text-left font-semibold">Last Updated</th>
+              <th className="px-5 py-4 text-left font-semibold">
+                Last Updated
+              </th>
               <th className="px-5 py-4 text-center font-semibold">Actions</th>
             </tr>
           </thead>

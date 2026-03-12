@@ -38,12 +38,14 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
       const data = await warehouseAPI.getPendingProducts();
       // Calculate packed count from full dataset
       const allOrders = Array.isArray(data) ? data : [];
-      const packedCount = allOrders.filter(order => order.status === "packed").length;
+      const packedCount = allOrders.filter(
+        (order) => order.status === "packed",
+      ).length;
       setPackedOrdersCount(packedCount);
-      
+
       // Filter to show only active pick orders (created or picked)
       const activeOrders = allOrders.filter(
-        order => order.status === "created" || order.status === "picked"
+        (order) => order.status === "created" || order.status === "picked",
       );
       setOrders(activeOrders);
     } catch (error) {
