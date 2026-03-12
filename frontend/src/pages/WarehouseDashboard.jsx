@@ -90,7 +90,7 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
 
   const getWarehouseAction = (order) => {
     const status = order.status?.toLowerCase();
-    
+
     if (status === "created") {
       return {
         text: "Mark as Picked",
@@ -248,7 +248,7 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
           <tbody>
             {orders.map((order) => {
               const action = getWarehouseAction(order);
-              
+
               return (
                 <tr key={order.order_id} className="border-t border-slate-800">
                   <td className="px-4 py-3 font-semibold text-cyan-300">
@@ -269,8 +269,8 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
                         order.status === "packed"
                           ? "bg-emerald-500/20 text-emerald-300"
                           : order.status === "picked"
-                          ? "bg-blue-500/20 text-blue-300"
-                          : "bg-amber-500/20 text-amber-300"
+                            ? "bg-blue-500/20 text-blue-300"
+                            : "bg-amber-500/20 text-amber-300"
                       }`}
                     >
                       {toTitleStatus(order.status)}

@@ -99,7 +99,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
     try {
       await deliveryAPI.updateStatus(orderId, newStatus);
       await loadDeliveries();
-      
+
       if (newStatus === "out_for_delivery") {
         toast.success(`Started delivery for order ${orderId}`);
       } else if (newStatus === "delivered") {
@@ -112,7 +112,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
 
   const getDeliveryAction = (delivery) => {
     const status = normalizeStatus(delivery.status);
-    
+
     if (status === "packed") {
       return {
         text: "Start Delivery",
@@ -273,9 +273,12 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
           <tbody>
             {activeDeliveries.map((delivery) => {
               const action = getDeliveryAction(delivery);
-              
+
               return (
-                <tr key={delivery.order_id} className="border-t border-slate-800">
+                <tr
+                  key={delivery.order_id}
+                  className="border-t border-slate-800"
+                >
                   <td className="px-4 py-3 font-semibold text-cyan-300">
                     {delivery.order_id}
                   </td>

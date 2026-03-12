@@ -28,7 +28,7 @@ function CreateAccount() {
     try {
       await registerUser(formData);
       toast.success("Account created successfully! Please login.");
-      
+
       setTimeout(() => {
         navigate("/login");
       }, 1000);

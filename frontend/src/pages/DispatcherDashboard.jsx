@@ -16,7 +16,7 @@ const toTitleStatus = (status) =>
 // Helper function to get status badge color
 const getStatusColor = (status) => {
   const normalizedStatus = (status || "").toString().toLowerCase();
-  
+
   switch (normalizedStatus) {
     case "created":
       return "bg-slate-600 text-slate-100";
@@ -39,7 +39,7 @@ const getStatusColor = (status) => {
 // Helper function to format timestamp
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return "N/A";
-  
+
   try {
     const date = new Date(timestamp);
     return date.toLocaleString("en-US", {
@@ -193,16 +193,20 @@ function DispatcherDashboard({ theme, onToggleTheme }) {
             {isLoading ? "Refreshing..." : "Refresh"}
           </button>
         </div>
-        
+
         <table className="min-w-full table-auto text-sm text-slate-200">
           <thead className="bg-slate-900 text-slate-300">
             <tr>
               <th className="px-5 py-4 text-left font-semibold">Order ID</th>
-              <th className="px-5 py-4 text-left font-semibold">Product Name</th>
+              <th className="px-5 py-4 text-left font-semibold">
+                Product Name
+              </th>
               <th className="px-5 py-4 text-left font-semibold">Driver Name</th>
               <th className="px-5 py-4 text-left font-semibold">Destination</th>
               <th className="px-5 py-4 text-left font-semibold">Status</th>
-              <th className="px-5 py-4 text-left font-semibold">Last Updated</th>
+              <th className="px-5 py-4 text-left font-semibold">
+                Last Updated
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -242,7 +246,7 @@ function DispatcherDashboard({ theme, onToggleTheme }) {
                   </td>
                   <td className="px-5 py-4 align-middle text-slate-400">
                     {formatTimestamp(
-                      order.delivered_at || order.packed_at || order.created_at
+                      order.delivered_at || order.packed_at || order.created_at,
                     )}
                   </td>
                 </tr>

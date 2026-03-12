@@ -56,7 +56,7 @@ const toTitleStatus = (status) =>
 
 const getStatusColor = (status) => {
   const normalizedStatus = (status || "").toString().toLowerCase();
-  
+
   switch (normalizedStatus) {
     case "created":
       return "bg-slate-600 text-slate-100";
@@ -110,7 +110,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
         destination: product.destination,
         warehouse: normalizeWarehouseName(product.warehouse_assigned),
         deliveryPerson: product.delivery_person_assigned,
-        deliveryPersonPhone: normalizePhoneNumber(product.delivery_person_phone),
+        deliveryPersonPhone: normalizePhoneNumber(
+          product.delivery_person_phone,
+        ),
         status: product.status,
       }));
 
@@ -310,11 +312,15 @@ function AdminDashboard({ theme, onToggleTheme }) {
         <table className="min-w-full table-auto text-sm text-slate-200">
           <thead className="bg-slate-900 text-slate-300">
             <tr>
-              <th className="px-5 py-4 text-left font-semibold">Product Name</th>
+              <th className="px-5 py-4 text-left font-semibold">
+                Product Name
+              </th>
               <th className="px-5 py-4 text-left font-semibold">Order ID</th>
               <th className="px-5 py-4 text-left font-semibold">Destination</th>
               <th className="px-5 py-4 text-left font-semibold">Warehouse</th>
-              <th className="px-5 py-4 text-left font-semibold">Delivery Person</th>
+              <th className="px-5 py-4 text-left font-semibold">
+                Delivery Person
+              </th>
               <th className="px-5 py-4 text-left font-semibold">
                 Delivery Person Phone Number
               </th>
@@ -327,14 +333,22 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 key={`${product.orderId}-${index}`}
                 className="border-t border-slate-800 text-slate-100"
               >
-                <td className="px-5 py-4 align-middle">{product.productName}</td>
+                <td className="px-5 py-4 align-middle">
+                  {product.productName}
+                </td>
                 <td className="px-5 py-4 align-middle font-medium text-cyan-300">
                   {product.orderId}
                 </td>
-                <td className="px-5 py-4 align-middle">{product.destination}</td>
+                <td className="px-5 py-4 align-middle">
+                  {product.destination}
+                </td>
                 <td className="px-5 py-4 align-middle">{product.warehouse}</td>
-                <td className="px-5 py-4 align-middle">{product.deliveryPerson}</td>
-                <td className="px-5 py-4 align-middle">{product.deliveryPersonPhone}</td>
+                <td className="px-5 py-4 align-middle">
+                  {product.deliveryPerson}
+                </td>
+                <td className="px-5 py-4 align-middle">
+                  {product.deliveryPersonPhone}
+                </td>
                 <td className="px-5 py-4 align-middle">
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(product.status)}`}
