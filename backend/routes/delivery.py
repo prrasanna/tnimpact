@@ -100,3 +100,57 @@ async def mark_order_delivered(
 
     logger.info("Delivery marked order %s as delivered", order_id)
     return schemas.ProductOut(**product)
+
+
+@router.put("/update-status/{order_id}", response_model=schemas.ProductOut)
+async def update_order_status(
+    order_id: str,
+    status_update: schemas.StatusUpdate,
+    _current_user: dict = Depends(require_role("delivery")),
+):
+    """Update order status (for delivery workflow: out_for_delivery -> delivered)."""
+    db = get_database()
+    product = await db.products.find_one({"order_id": order_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    new_status = status_update.status
+    current_status = product["status"]
+
+    # Validate transitions for delivery role
+    valid_transitions = {
+        "packed": ["out_for_delivery"],
+        "out_for_delivery": ["delivered"],
+    }
+
+    if current_status not in valid_transitions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update from status '{current_status}'",
+        )
+
+    if new_status not in valid_transitions[current_status]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid transition from '{current_status}' to '{new_status}'",
+        )
+
+    # Prepare update fields
+    update_fields = {"status": new_status}
+    
+    # Set timestamp based on new status
+    if new_status == "delivered":
+        update_fields["delivered_at"] = datetime.utcnow()
+
+    # Update status
+    await db.products.update_one(
+        {"order_id": order_id},
+        {"$set": update_fields}
+    )
+    
+    # Fetch updated product
+    product = await db.products.find_one({"order_id": order_id})
+    product["_id"] = str(product["_id"])
+
+    logger.info("Delivery updated order %s status to %s", order_id, new_status)
+    return schemas.ProductOut(**product)

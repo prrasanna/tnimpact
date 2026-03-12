@@ -62,7 +62,7 @@ async def get_pending_products(
 
     products = await db.products.find(
         {
-            "status": {"$in": ["created", "packed"]},
+            "status": {"$in": ["created", "picked", "packed"]},
             "$or": assignment_filters,
         }
     ).sort("created_at", 1).to_list(length=1000)
@@ -85,7 +85,7 @@ async def mark_order_packed(
     if not product:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    if product["status"] != "created":
+    if product["status"] not in {"created", "picked"}:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot mark packed from status {product['status']}",
@@ -107,5 +107,41 @@ async def mark_order_packed(
     product["_id"] = str(product["_id"])
 
     logger.info("Warehouse marked order %s as packed", order_id)
+
+    return schemas.ProductOut(**product)
+
+
+@router.put("/mark-picked/{order_id}", response_model=schemas.ProductOut)
+async def mark_order_picked(
+    order_id: str,
+    _current_user: dict = Depends(require_role("warehouse")),
+):
+    """Mark assigned order as picked (first step in warehouse workflow)."""
+    db = get_database()
+    product = await db.products.find_one({"order_id": order_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if product["status"] != "created":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot mark picked from status {product['status']}",
+        )
+
+    # Update status
+    await db.products.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "status": "picked",
+            }
+        }
+    )
+    
+    # Fetch updated product
+    product = await db.products.find_one({"order_id": order_id})
+    product["_id"] = str(product["_id"])
+
+    logger.info("Warehouse marked order %s as picked", order_id)
 
     return schemas.ProductOut(**product)

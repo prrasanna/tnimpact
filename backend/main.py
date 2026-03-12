@@ -13,6 +13,7 @@ from context_manager import get_context_manager
 from database import connect_to_mongodb, close_mongodb_connection
 from routes.admin import router as admin_router
 from routes.delivery import router as delivery_router
+from routes.dispatcher import router as dispatcher_router
 from routes.warehouse import router as warehouse_router
 from voice import listen_command, process_voice_command, speak_text
 
@@ -198,6 +199,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(warehouse_router)
 app.include_router(delivery_router)
+app.include_router(dispatcher_router)
 
 
 if __name__ == "__main__":

@@ -75,6 +75,13 @@ export const warehouseAPI = {
     return apiRequest("/warehouse/pending");
   },
 
+  // Mark order as picked
+  markPicked: async (orderId) => {
+    return apiRequest(`/warehouse/mark-picked/${orderId}`, {
+      method: "PUT",
+    });
+  },
+
   // Mark order as packed
   markPacked: async (orderId) => {
     return apiRequest(`/warehouse/mark-packed/${orderId}`, {
@@ -95,6 +102,27 @@ export const deliveryAPI = {
     return apiRequest(`/delivery/mark-delivered/${orderId}`, {
       method: "PUT",
     });
+  },
+
+  // Update order status
+  updateStatus: async (orderId, status) => {
+    return apiRequest(`/delivery/update-status/${orderId}`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+  },
+};
+
+// Dispatcher API calls
+export const dispatcherAPI = {
+  // Get all orders
+  getAllOrders: async () => {
+    return apiRequest("/dispatcher/orders");
+  },
+
+  // Get dashboard data
+  getDashboardData: async () => {
+    return apiRequest("/dispatcher/dashboard-data");
   },
 };
 
@@ -142,6 +170,7 @@ export default {
   admin: adminAPI,
   warehouse: warehouseAPI,
   delivery: deliveryAPI,
+  dispatcher: dispatcherAPI,
   voice: voiceAPI,
   context: contextAPI,
 };

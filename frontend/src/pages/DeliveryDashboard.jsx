@@ -95,6 +95,48 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
     }
   };
 
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await deliveryAPI.updateStatus(orderId, newStatus);
+      await loadDeliveries();
+      
+      if (newStatus === "out_for_delivery") {
+        toast.success(`Started delivery for order ${orderId}`);
+      } else if (newStatus === "delivered") {
+        toast.success(`Order ${orderId} marked as delivered`);
+      }
+    } catch (error) {
+      toast.error(error.message || `Failed to update order ${orderId}`);
+    }
+  };
+
+  const getDeliveryAction = (delivery) => {
+    const status = normalizeStatus(delivery.status);
+    
+    if (status === "packed") {
+      return {
+        text: "Start Delivery",
+        icon: <Truck size={14} />,
+        action: () => updateOrderStatus(delivery.order_id, "out_for_delivery"),
+        disabled: isLoading,
+      };
+    } else if (status === "out_for_delivery") {
+      return {
+        text: "Mark as Delivered",
+        icon: <CircleCheck size={14} />,
+        action: () => updateOrderStatus(delivery.order_id, "delivered"),
+        disabled: isLoading,
+      };
+    } else {
+      return {
+        text: "Mark as Delivered",
+        icon: <Truck size={14} />,
+        action: () => markAsDelivered(delivery.order_id),
+        disabled: !isPendingDelivery(delivery.status) || isLoading,
+      };
+    }
+  };
+
   const handleVoiceCommand = async (command) => {
     // Phase 2: Backend now gets user info from JWT token
     const result = await voiceAPI.processCommand({
@@ -229,44 +271,48 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
             </tr>
           </thead>
           <tbody>
-            {activeDeliveries.map((delivery) => (
-              <tr key={delivery.order_id} className="border-t border-slate-800">
-                <td className="px-4 py-3 font-semibold text-cyan-300">
-                  {delivery.order_id}
-                </td>
-                <td className="px-4 py-3 text-slate-200">
-                  {delivery.product_name || "-"}
-                </td>
-                <td className="px-4 py-3 text-slate-200">
-                  {delivery.destination || "-"}
-                </td>
-                <td className="px-4 py-3 text-slate-200">
-                  {delivery.delivery_person_phone || "-"}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                      delivery.status === "delivered"
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-amber-500/20 text-amber-300"
-                    }`}
-                  >
-                    {toTitleStatus(delivery.status)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    disabled={!isPendingDelivery(delivery.status) || isLoading}
-                    onClick={() => markAsDelivered(delivery.order_id)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Truck size={14} />
-                    Mark as Delivered
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {activeDeliveries.map((delivery) => {
+              const action = getDeliveryAction(delivery);
+              
+              return (
+                <tr key={delivery.order_id} className="border-t border-slate-800">
+                  <td className="px-4 py-3 font-semibold text-cyan-300">
+                    {delivery.order_id}
+                  </td>
+                  <td className="px-4 py-3 text-slate-200">
+                    {delivery.product_name || "-"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-200">
+                    {delivery.destination || "-"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-200">
+                    {delivery.delivery_person_phone || "-"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                        delivery.status === "delivered"
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : "bg-amber-500/20 text-amber-300"
+                      }`}
+                    >
+                      {toTitleStatus(delivery.status)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      disabled={action.disabled}
+                      onClick={action.action}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {action.icon}
+                      {action.text}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
             {activeDeliveries.length === 0 && (
               <tr className="border-t border-slate-800">
                 <td

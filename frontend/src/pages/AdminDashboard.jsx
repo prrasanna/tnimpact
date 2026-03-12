@@ -48,6 +48,31 @@ const isValidOrderId = (value) => /^ORD-\d{4,}$/.test(value);
 const isValidPhoneNumber = (value) => /^\+91\s\d{5}\s\d{5}$/.test(value);
 const isValidWarehouseName = (value) => /^Warehouse\s[A-Z]$/.test(value);
 
+const toTitleStatus = (status) =>
+  (status || "")
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const getStatusColor = (status) => {
+  const normalizedStatus = (status || "").toString().toLowerCase();
+  
+  switch (normalizedStatus) {
+    case "created":
+      return "bg-slate-600 text-slate-100";
+    case "picked":
+      return "bg-blue-600 text-blue-100";
+    case "packed":
+      return "bg-purple-600 text-purple-100";
+    case "out_for_delivery":
+      return "bg-yellow-600 text-yellow-100";
+    case "delivered":
+      return "bg-green-600 text-green-100";
+    default:
+      return "bg-gray-600 text-gray-100";
+  }
+};
+
 // Admin dashboard with product assignment form and table.
 function AdminDashboard({ theme, onToggleTheme }) {
   const navItems = [
@@ -86,6 +111,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
         warehouse: normalizeWarehouseName(product.warehouse_assigned),
         deliveryPerson: product.delivery_person_assigned,
         deliveryPersonPhone: normalizePhoneNumber(product.delivery_person_phone),
+        status: product.status,
       }));
 
       setProducts(mappedProducts);
@@ -292,6 +318,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
               <th className="px-5 py-4 text-left font-semibold">
                 Delivery Person Phone Number
               </th>
+              <th className="px-5 py-4 text-left font-semibold">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -308,6 +335,13 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 <td className="px-5 py-4 align-middle">{product.warehouse}</td>
                 <td className="px-5 py-4 align-middle">{product.deliveryPerson}</td>
                 <td className="px-5 py-4 align-middle">{product.deliveryPersonPhone}</td>
+                <td className="px-5 py-4 align-middle">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(product.status)}`}
+                  >
+                    {toTitleStatus(product.status)}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>

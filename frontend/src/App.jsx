@@ -7,6 +7,7 @@ import CreateAccount from "./pages/CreateAccount";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
 import DeliveryRoute from "./pages/DeliveryRoute";
 import DeliverySettings from "./pages/DeliverySettings";
+import DispatcherDashboard from "./pages/DispatcherDashboard";
 import MyDeliveries from "./pages/mydeliveries";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -49,6 +50,17 @@ function App() {
           element={
             <ProtectedRoute allowedRole="warehouse">
               <WarehouseDashboard
+                theme={theme}
+                onToggleTheme={handleToggleTheme}
+              />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dispatcher"
+          element={
+            <ProtectedRoute allowedRole="dispatcher">
+              <DispatcherDashboard
                 theme={theme}
                 onToggleTheme={handleToggleTheme}
               />

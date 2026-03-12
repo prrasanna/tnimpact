@@ -53,10 +53,25 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
     [orders],
   );
 
+  const pickedCount = useMemo(
+    () => orders.filter((order) => order.status === "picked").length,
+    [orders],
+  );
+
   const packedCount = useMemo(
     () => orders.filter((order) => order.status === "packed").length,
     [orders],
   );
+
+  const markAsPicked = async (orderId) => {
+    try {
+      await warehouseAPI.markPicked(orderId);
+      await loadOrders();
+      toast.success(`Order ${orderId} marked as picked`);
+    } catch (error) {
+      toast.error(error.message || `Failed to mark ${orderId} as picked`);
+    }
+  };
 
   const markAsPacked = async (orderId, options = {}) => {
     const { fromVoice = false } = options;
@@ -70,6 +85,33 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
       }
     } catch (error) {
       toast.error(error.message || `Failed to mark ${orderId} as packed`);
+    }
+  };
+
+  const getWarehouseAction = (order) => {
+    const status = order.status?.toLowerCase();
+    
+    if (status === "created") {
+      return {
+        text: "Mark as Picked",
+        icon: <PackageSearch size={14} />,
+        action: () => markAsPicked(order.order_id),
+        disabled: isLoading,
+      };
+    } else if (status === "picked") {
+      return {
+        text: "Mark as Packed",
+        icon: <CircleCheck size={14} />,
+        action: () => markAsPacked(order.order_id),
+        disabled: isLoading,
+      };
+    } else {
+      return {
+        text: "Completed",
+        icon: <CircleCheck size={14} />,
+        action: null,
+        disabled: true,
+      };
     }
   };
 
@@ -204,43 +246,57 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
             </tr>
           </thead>
           <tbody>
-            {orders.map((order) => (
-              <tr key={order.order_id} className="border-t border-slate-800">
-                <td className="px-4 py-3 font-semibold text-cyan-300">
-                  {order.order_id}
-                </td>
-                <td className="px-4 py-3 text-slate-200">
-                  {order.product_name}
-                </td>
-                <td className="px-4 py-3 text-slate-200">
-                  {order.delivery_person_assigned || "-"}
-                </td>
-                <td className="px-4 py-3 text-slate-200">
-                  {order.delivery_person_phone || "-"}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                      order.status === "packed"
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-amber-500/20 text-amber-300"
-                    }`}
-                  >
-                    {toTitleStatus(order.status)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    disabled={order.status !== "created" || isLoading}
-                    onClick={() => markAsPacked(order.order_id)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Mark as Packed
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {orders.map((order) => {
+              const action = getWarehouseAction(order);
+              
+              return (
+                <tr key={order.order_id} className="border-t border-slate-800">
+                  <td className="px-4 py-3 font-semibold text-cyan-300">
+                    {order.order_id}
+                  </td>
+                  <td className="px-4 py-3 text-slate-200">
+                    {order.product_name}
+                  </td>
+                  <td className="px-4 py-3 text-slate-200">
+                    {order.delivery_person_assigned || "-"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-200">
+                    {order.delivery_person_phone || "-"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                        order.status === "packed"
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : order.status === "picked"
+                          ? "bg-blue-500/20 text-blue-300"
+                          : "bg-amber-500/20 text-amber-300"
+                      }`}
+                    >
+                      {toTitleStatus(order.status)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {action.action ? (
+                      <button
+                        type="button"
+                        disabled={action.disabled}
+                        onClick={action.action}
+                        className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {action.icon}
+                        {action.text}
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 text-slate-500">
+                        {action.icon}
+                        {action.text}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </section>

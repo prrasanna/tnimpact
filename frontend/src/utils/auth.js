@@ -9,6 +9,7 @@ export const roleToRoute = {
   admin: "/admin",
   warehouse: "/warehouse",
   delivery: "/delivery",
+  dispatcher: "/dispatcher",
 };
 
 // Register new user via backend API
@@ -19,6 +20,7 @@ export const registerUser = async ({ name, email, password, role }) => {
       Admin: "admin",
       "Warehouse Staff": "warehouse",
       "Delivery Person": "delivery",
+      Dispatcher: "dispatcher",
     };
 
     const backendRole = roleMap[role] || role.toLowerCase();

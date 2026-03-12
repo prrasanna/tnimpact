@@ -99,6 +99,7 @@ function CreateAccount() {
           <option>Admin</option>
           <option>Warehouse Staff</option>
           <option>Delivery Person</option>
+          <option>Dispatcher</option>
         </select>
 
         <button

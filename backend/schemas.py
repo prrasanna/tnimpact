@@ -12,7 +12,7 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
-    role: Literal["admin", "warehouse", "delivery"]
+    role: Literal["admin", "warehouse", "delivery", "dispatcher"]
 
 
 class UserOut(BaseModel):
@@ -66,6 +66,7 @@ class ProductOut(BaseModel):
     delivery_person_phone: str
     status: Literal[
         "created",
+        "picked",
         "packed",
         "out_for_delivery",
         "delivered",
@@ -106,6 +107,21 @@ class SpeakRequest(BaseModel):
     """Schema for simple text-to-speech endpoint."""
 
     command: str
+
+
+class StatusUpdate(BaseModel):
+    """Schema for updating order status."""
+
+    status: Literal[
+        "created",
+        "picked",
+        "packed",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+        "returned",
+        "failed",
+    ]
 
 
 class AdminStatsOut(BaseModel):
