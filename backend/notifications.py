@@ -99,15 +99,15 @@ def _send_email_sync(to_email: str, subject: str, body: str) -> None:
 
 
 async def send_order_email_notification(event: str, order: dict) -> bool:
-    """Send lifecycle email to delivery person email if SMTP is configured.
+    """Send lifecycle email to customer email if SMTP is configured.
 
     Returns True if email was sent, False if skipped/failed.
     """
-    to_email = (order.get("delivery_person_email") or "").strip()
+    to_email = (order.get("customer_email") or order.get("delivery_person_email") or "").strip()
     order_id = order.get("order_id", "Unknown")
 
     if not to_email:
-        logger.info("Email notification skipped for %s: no delivery_person_email", order_id)
+        logger.info("Email notification skipped for %s: no customer_email", order_id)
         return False
 
     if not _smtp_enabled():

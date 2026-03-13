@@ -91,6 +91,9 @@ function MyDeliveries({ theme, onToggleTheme }) {
                 Destination
               </th>
               <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
+                Customer Name
+              </th>
+              <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
                 Customer Phone
               </th>
               <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
@@ -114,7 +117,10 @@ function MyDeliveries({ theme, onToggleTheme }) {
                   {delivery.destination || "-"}
                 </td>
                 <td className="px-4 py-3 text-slate-200">
-                  {delivery.delivery_person_phone || "-"}
+                  {delivery.customer_name || "-"}
+                </td>
+                <td className="px-4 py-3 text-slate-200">
+                  {delivery.customer_phone || "-"}
                 </td>
                 <td className="px-4 py-3">
                   <span className="inline-flex rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-emerald-300">
@@ -130,7 +136,7 @@ function MyDeliveries({ theme, onToggleTheme }) {
               <tr className="border-t border-slate-800">
                 <td
                   className="px-4 py-6 text-center text-slate-400"
-                  colSpan={6}
+                  colSpan={7}
                 >
                   No completed deliveries yet.
                 </td>

@@ -172,7 +172,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
     warehouse: "",
     deliveryPerson: "",
     deliveryPersonPhone: "",
-    deliveryPersonEmail: "",
+    customerName: "",
+    customerPhone: "",
+    customerEmail: "",
     sourceLocation: "",
   });
 
@@ -214,10 +216,10 @@ function AdminDashboard({ theme, onToggleTheme }) {
         ),
         warehouseAssigned: product.warehouse_assigned,
         deliveryPerson: product.delivery_person_assigned,
-        deliveryPersonPhone: normalizePhoneNumber(
-          product.delivery_person_phone,
-        ),
-        deliveryPersonEmail: product.delivery_person_email || "",
+        deliveryPersonPhone: normalizePhoneNumber(product.delivery_person_phone),
+        customerName: product.customer_name || "",
+        customerPhone: normalizePhoneNumber(product.customer_phone),
+        customerEmail: product.customer_email || "",
         sourceLocation: product.source_location,
         deliveryStartLocation: product.delivery_start_location,
         specialInstructions: product.special_instructions,
@@ -290,6 +292,8 @@ function AdminDashboard({ theme, onToggleTheme }) {
       warehouse: normalizeWarehouseName(formData.warehouse),
       deliveryPerson: formData.deliveryPerson.trim(),
       deliveryPersonPhone: normalizePhoneNumber(formData.deliveryPersonPhone),
+      customerName: formData.customerName.trim(),
+      customerPhone: normalizePhoneNumber(formData.customerPhone),
       sourceLocation,
     };
 
@@ -319,11 +323,21 @@ function AdminDashboard({ theme, onToggleTheme }) {
     }
 
     if (!isValidPhoneNumber(payload.deliveryPersonPhone)) {
+      toast.error("Delivery person phone must be in format +91 98765 43210");
+      return;
+    }
+
+    if (!payload.customerName) {
+      toast.error("Customer Name is required");
+      return;
+    }
+
+    if (!isValidPhoneNumber(payload.customerPhone)) {
       toast.error("Phone number must be in format +91 98765 43210");
       return;
     }
 
-    const emailTrimmed = formData.deliveryPersonEmail.trim();
+    const emailTrimmed = formData.customerEmail.trim();
     if (emailTrimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
       toast.error("Please enter a valid email address");
       return;
@@ -344,7 +358,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
             warehouse_assigned: payload.warehouse,
             delivery_person_assigned: payload.deliveryPerson,
             delivery_person_phone: payload.deliveryPersonPhone,
-            delivery_person_email: formData.deliveryPersonEmail.trim() || undefined,
+            customer_name: payload.customerName,
+            customer_phone: payload.customerPhone,
+            customer_email: formData.customerEmail.trim() || undefined,
             source_location: payload.sourceLocation,
           }),
         },
@@ -362,7 +378,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
         warehouse: "",
         deliveryPerson: "",
         deliveryPersonPhone: "",
-        deliveryPersonEmail: "",
+        customerName: "",
+        customerPhone: "",
+        customerEmail: "",
         sourceLocation: "",
       });
       toast.success("Product added successfully");
@@ -440,10 +458,10 @@ function AdminDashboard({ theme, onToggleTheme }) {
         ),
         warehouseAssigned: updated.warehouse_assigned,
         deliveryPerson: updated.delivery_person_assigned,
-        deliveryPersonPhone: normalizePhoneNumber(
-          updated.delivery_person_phone,
-        ),
-        deliveryPersonEmail: updated.delivery_person_email || "",
+        deliveryPersonPhone: normalizePhoneNumber(updated.delivery_person_phone),
+        customerName: updated.customer_name || "",
+        customerPhone: normalizePhoneNumber(updated.customer_phone),
+        customerEmail: updated.customer_email || "",
         sourceLocation: updated.source_location,
         deliveryStartLocation: updated.delivery_start_location,
         specialInstructions: updated.special_instructions,
@@ -499,7 +517,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
       "warehouse_assigned",
       "delivery_person_assigned",
       "delivery_person_phone",
-      "delivery_person_email",
+      "customer_name",
+      "customer_phone",
+      "customer_email",
       "status",
       "created_at",
       "updated_at",
@@ -584,10 +604,26 @@ function AdminDashboard({ theme, onToggleTheme }) {
             className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           />
           <input
+            required
+            name="customerName"
+            placeholder="Customer Name"
+            value={formData.customerName}
+            onChange={handleChange}
+            className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          />
+          <input
+            required
+            name="customerPhone"
+            placeholder="Customer Phone Number (+91 98765 43210)"
+            value={formData.customerPhone}
+            onChange={handleChange}
+            className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          />
+          <input
             type="email"
-            name="deliveryPersonEmail"
-            placeholder="Delivery Person Email Address"
-            value={formData.deliveryPersonEmail}
+            name="customerEmail"
+            placeholder="Customer Email Address"
+            value={formData.customerEmail}
             onChange={handleChange}
             className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           />
@@ -635,6 +671,12 @@ function AdminDashboard({ theme, onToggleTheme }) {
               </th>
               <th className="px-5 py-4 text-left font-semibold">Destination</th>
               <th className="px-5 py-4 text-left font-semibold">Warehouse</th>
+              <th className="px-5 py-4 text-left font-semibold">
+                Customer Name
+              </th>
+              <th className="px-5 py-4 text-left font-semibold">
+                Customer Phone Number
+              </th>
               <th className="px-5 py-4 text-left font-semibold">Status</th>
               <th className="px-5 py-4 text-left font-semibold">
                 Last Updated
@@ -659,6 +701,12 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 </td>
                 <td className="px-5 py-4 align-middle">{product.warehouse}</td>
                 <td className="px-5 py-4 align-middle">
+                  {product.customerName || "-"}
+                </td>
+                <td className="px-5 py-4 align-middle">
+                  {product.customerPhone || "-"}
+                </td>
+                <td className="px-5 py-4 align-middle">
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(product.status)}`}
                   >
@@ -682,7 +730,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
             {products.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={9}
                   className="px-5 py-8 text-center text-slate-400"
                 >
                   {isLoading ? "Loading orders..." : "No orders found"}
@@ -767,10 +815,26 @@ function AdminDashboard({ theme, onToggleTheme }) {
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
                 <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Delivery Person Email
+                  Customer Name
                 </p>
                 <p className="mt-1 font-medium">
-                  {formatDetailValue(selectedOrder.deliveryPersonEmail)}
+                  {formatDetailValue(selectedOrder.customerName)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Customer Phone Number
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDetailValue(selectedOrder.customerPhone)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Customer Email
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDetailValue(selectedOrder.customerEmail)}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">

@@ -50,7 +50,9 @@ class ProductCreate(BaseModel):
     warehouse_assigned: str
     delivery_person_assigned: str
     delivery_person_phone: str
-    delivery_person_email: str = ""
+    customer_name: str
+    customer_phone: str
+    customer_email: str = ""
     source_location: str = ""
     special_instructions: str = ""
     delivery_notes: str = ""
@@ -65,8 +67,10 @@ class ProductOut(BaseModel):
     destination: str
     warehouse_assigned: str
     delivery_person_assigned: str
-    delivery_person_phone: str
-    delivery_person_email: str = ""
+    delivery_person_phone: str = ""
+    customer_name: str = ""
+    customer_phone: str = ""
+    customer_email: str = ""
     source_location: str = ""
     delivery_start_location: str = ""
     delivery_started_at: Optional[datetime] = None

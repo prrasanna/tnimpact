@@ -46,7 +46,13 @@ class Product(BaseModel):
     warehouse_assigned: str = Field(..., max_length=255)
     delivery_person_assigned: str = Field(..., max_length=255)
     delivery_person_phone: str = Field(default="", max_length=50)
-    delivery_person_email: str = Field(default="", max_length=255)
+    customer_name: str = Field(default="", max_length=255)
+    customer_phone: str = Field(default="", max_length=50)
+    customer_email: str = Field(default="", max_length=255)
+    source_location: str = Field(default="", max_length=255)
+    delivery_start_location: str = Field(default="", max_length=255)
+    delivery_started_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     status: str = Field(default="created", max_length=50)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     packed_at: Optional[datetime] = None

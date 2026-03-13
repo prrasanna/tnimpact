@@ -302,7 +302,7 @@ async def process_voice_command(
                     ctx_manager.update_context(actor_name, {
                         "last_order_id": order_id,
                         "last_location": order.get("destination"),
-                        "last_customer_phone": order.get("delivery_person_phone"),
+                        "last_customer_phone": order.get("customer_phone") or order.get("delivery_person_phone"),
                     })
                     context_updated = True
 
