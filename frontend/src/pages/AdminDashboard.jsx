@@ -158,6 +158,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailForm, setDetailForm] = useState({
+    customerName: "",
+    customerPhone: "",
+    customerEmail: "",
     sourceLocation: "",
     deliveryStartLocation: "",
     deliveryStartedAt: "",
@@ -217,8 +220,14 @@ function AdminDashboard({ theme, onToggleTheme }) {
         warehouseAssigned: product.warehouse_assigned,
         deliveryPerson: product.delivery_person_assigned,
         deliveryPersonPhone: normalizePhoneNumber(product.delivery_person_phone),
-        customerName: product.customer_name || "",
-        customerPhone: normalizePhoneNumber(product.customer_phone),
+        customerName:
+          product.customer_name ||
+          product.customerName ||
+          "",
+        customerPhone: normalizePhoneNumber(
+          product.customer_phone ||
+            product.customerPhone,
+        ),
         customerEmail: product.customer_email || "",
         sourceLocation: product.source_location,
         deliveryStartLocation: product.delivery_start_location,
@@ -393,6 +402,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
   const handleViewDetails = (order) => {
     setSelectedOrder(order);
     setDetailForm({
+      customerName: order.customerName || "",
+      customerPhone: order.customerPhone || "",
+      customerEmail: order.customerEmail || "",
       sourceLocation: order.sourceLocation || "",
       deliveryStartLocation: order.deliveryStartLocation || "",
       deliveryStartedAt: formatDateTimeForInput(order.deliveryStartedAt),
@@ -427,6 +439,9 @@ function AdminDashboard({ theme, onToggleTheme }) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            customer_name: detailForm.customerName.trim(),
+            customer_phone: detailForm.customerPhone.trim(),
+            customer_email: detailForm.customerEmail.trim(),
             source_location: detailForm.sourceLocation.trim(),
             delivery_start_location: detailForm.deliveryStartLocation.trim(),
             delivery_started_at: detailForm.deliveryStartedAt
@@ -459,8 +474,14 @@ function AdminDashboard({ theme, onToggleTheme }) {
         warehouseAssigned: updated.warehouse_assigned,
         deliveryPerson: updated.delivery_person_assigned,
         deliveryPersonPhone: normalizePhoneNumber(updated.delivery_person_phone),
-        customerName: updated.customer_name || "",
-        customerPhone: normalizePhoneNumber(updated.customer_phone),
+        customerName:
+          updated.customer_name ||
+          updated.customerName ||
+          "",
+        customerPhone: normalizePhoneNumber(
+          updated.customer_phone ||
+            updated.customerPhone,
+        ),
         customerEmail: updated.customer_email || "",
         sourceLocation: updated.source_location,
         deliveryStartLocation: updated.delivery_start_location,
@@ -884,6 +905,45 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 <p className="mt-1 font-medium">
                   {formatDateTime(selectedOrder.deliveredAt)}
                 </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3 sm:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Customer Name
+                </p>
+                <input
+                  type="text"
+                  name="customerName"
+                  value={detailForm.customerName}
+                  onChange={handleDetailFieldChange}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Enter customer name"
+                />
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Customer Phone Number
+                </p>
+                <input
+                  type="text"
+                  name="customerPhone"
+                  value={detailForm.customerPhone}
+                  onChange={handleDetailFieldChange}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Enter customer phone number"
+                />
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Customer Email
+                </p>
+                <input
+                  type="email"
+                  name="customerEmail"
+                  value={detailForm.customerEmail}
+                  onChange={handleDetailFieldChange}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Enter customer email"
+                />
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950 p-3 sm:col-span-2">
                 <p className="text-xs uppercase tracking-wide text-slate-400">

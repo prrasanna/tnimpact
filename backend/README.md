@@ -91,17 +91,11 @@ SMTP_FROM_NAME=Logistics Assistant
 SMTP_USE_TLS=true
 SMTP_USE_SSL=false
 
-# SMS notifications (optional, Twilio)
-TWILIO_SMS_ENABLED=true
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=
-# Set one of the following:
-TWILIO_FROM_NUMBER=
-TWILIO_MESSAGING_SERVICE_SID=
+# SMS notifications removed
+TWILIO_SMS_ENABLED=false
 ```
 
 Set `SMTP_ENABLED=true` after filling valid SMTP credentials to send delivery-person emails on order created, packed, and delivered events.
-Set `TWILIO_SMS_ENABLED=true` after filling valid Twilio credentials to send customer SMS on order `created`, `packed`, `out_for_delivery`, and `delivered` events.
 
 ### 4. Test MongoDB Connection
 

@@ -12,7 +12,6 @@ pydantic
 pydantic-settings
 email-validator
 python-dotenv
-twilio
 
 # Phase 2 Voice Features
 redis>=5.0.0

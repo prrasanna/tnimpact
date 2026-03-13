@@ -98,6 +98,9 @@ class ProductOut(BaseModel):
 class ProductAdminDetailsUpdate(BaseModel):
     """Schema for admin updates to order detail fields."""
 
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
     source_location: Optional[str] = None
     delivery_start_location: Optional[str] = None
     delivery_started_at: Optional[datetime] = None
