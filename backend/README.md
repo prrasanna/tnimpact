@@ -79,7 +79,20 @@ DATABASE_NAME=voice_logistics
 SECRET_KEY=your-secret-key-here-change-in-production
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Email notifications (optional)
+SMTP_ENABLED=false
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM_EMAIL=
+SMTP_FROM_NAME=Logistics Assistant
+SMTP_USE_TLS=true
+SMTP_USE_SSL=false
 ```
+
+Set `SMTP_ENABLED=true` after filling valid SMTP credentials to send delivery-person emails on order created, packed, and delivered events.
 
 ### 4. Test MongoDB Connection
 

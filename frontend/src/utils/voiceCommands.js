@@ -202,6 +202,11 @@ const isPendingIntent = (text) =>
     "pending orders",
     "list pending",
     "pending delivery",
+    "pending deliveries",
+    "all pending",
+    "my pending",
+    "pending list",
+    "how many pending",
   ]);
 
 const isCallCustomerIntent = (text) =>

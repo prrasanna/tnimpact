@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import schemas
 from auth import require_role
 from database import get_database
+from notifications import send_order_email_notification
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,8 @@ async def mark_order_packed(
     # Fetch updated product
     product = await db.products.find_one({"order_id": order_id})
     product["_id"] = str(product["_id"])
+
+    await send_order_email_notification(event="packed", order=product)
 
     logger.info("Warehouse marked order %s as packed", order_id)
 

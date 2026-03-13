@@ -30,14 +30,8 @@ const parseCoordinates = (value) => {
   return { lat, lon };
 };
 
-const buildOsmEmbedUrl = ({ lat, lon }) => {
-  const delta = 0.01;
-  const left = lon - delta;
-  const right = lon + delta;
-  const top = lat + delta;
-  const bottom = lat - delta;
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${lat}%2C${lon}`;
-};
+const buildMapEmbedUrl = ({ lat, lon }) =>
+  `https://www.google.com/maps?output=embed&q=${lat},${lon}&z=15&hl=en`;
 
 // Delivery dashboard powered by backend delivery endpoints.
 function DeliveryDashboard({ theme, onToggleTheme }) {
@@ -422,7 +416,7 @@ function DeliveryDashboard({ theme, onToggleTheme }) {
             <div className="mt-3 overflow-hidden rounded-xl border border-slate-700">
               <iframe
                 title="Customer GPS Map"
-                src={buildOsmEmbedUrl(activeMapCoords)}
+                src={buildMapEmbedUrl(activeMapCoords)}
                 className="h-80 w-full"
                 loading="lazy"
               />

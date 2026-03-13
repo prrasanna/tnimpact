@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import schemas
 from auth import require_role
 from database import get_database
+from notifications import send_order_email_notification
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,8 @@ async def mark_order_delivered(
     product = await db.products.find_one({"order_id": order_id})
     product["_id"] = str(product["_id"])
 
+    await send_order_email_notification(event="delivered", order=product)
+
     logger.info("Delivery marked order %s as delivered", order_id)
     return schemas.ProductOut(**product)
 
@@ -157,6 +160,9 @@ async def update_order_status(
     # Fetch updated product
     product = await db.products.find_one({"order_id": order_id})
     product["_id"] = str(product["_id"])
+
+    if new_status == "delivered":
+        await send_order_email_notification(event="delivered", order=product)
 
     logger.info("Delivery updated order %s status to %s", order_id, new_status)
     return schemas.ProductOut(**product)

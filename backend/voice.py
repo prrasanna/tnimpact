@@ -15,6 +15,7 @@ from gtts import gTTS
 
 from context_manager import get_context_manager
 from database import get_database
+from notifications import send_order_email_notification
 
 logger = logging.getLogger(__name__)
 
@@ -139,13 +140,50 @@ def _intent_from_text(normalized_command: str) -> str:
     if "track order" in normalized_command or "track it" in normalized_command:
         return "track_order"
     
-    if "show order" in normalized_command or "show it" in normalized_command:
+    if ("show order" in normalized_command or "show it" in normalized_command) and "orders" not in normalized_command:
         return "track_order"
     
     # Status queries
-    if ("what" in normalized_command or "show" in normalized_command) and "status" in normalized_command:
+    if (("what" in normalized_command or "show" in normalized_command) and "status" in normalized_command
+            and "orders" not in normalized_command):
         return "track_order"
     
+    # Pending orders list — check BEFORE mark block to avoid "pending" triggering mark_pending
+    if any(phrase in normalized_command for phrase in [
+        "show pending",
+        "list pending",
+        "pending orders",
+        "pending deliveries",
+        "pending delivery",
+        "pending list",
+        "show orders",
+        "list orders",
+        "all pending",
+        "how many pending",
+        "my pending",
+    ]):
+        return "show_pending_orders"
+
+    # My orders / assigned orders list
+    if any(phrase in normalized_command for phrase in [
+        "my orders",
+        "show my orders",
+        "my deliveries",
+        "show my deliveries",
+        "assigned orders",
+        "assigned products",
+        "my tasks",
+    ]):
+        return "show_pending_orders"
+
+    # Location queries (Phase 2) — check before mark block
+    if ("what" in normalized_command or "where" in normalized_command) and ("location" in normalized_command or "headed" in normalized_command):
+        return "query_location"
+
+    # Update location (Phase 2) — check before mark block
+    if "update" in normalized_command and "location" in normalized_command:
+        return "update_location"
+
     # Mark status changes (Phase 2: support multiple statuses)
     # Check for action/status keywords regardless of word order.
     has_mark_keyword = any(
@@ -197,18 +235,6 @@ def _intent_from_text(normalized_command: str) -> str:
             return "mark_in_transit"
         elif "pending" in normalized_command:
             return "mark_pending"
-    
-    # Location queries (Phase 2)
-    if ("what" in normalized_command or "where" in normalized_command) and ("location" in normalized_command or "headed" in normalized_command):
-        return "query_location"
-    
-    # Update location (Phase 2)
-    if "update" in normalized_command and "location" in normalized_command:
-        return "update_location"
-    
-    # Pending orders list
-    if "pending" in normalized_command and ("order" in normalized_command or "list" in normalized_command):
-        return "show_pending_orders"
 
     return "unknown"
 
@@ -343,6 +369,13 @@ async def process_voice_command(
                         if action_performed
                         else f"ஆர்டர் {order_id} க்கு எந்த அப்டேட்டும் செய்யப்படவில்லை.\nNo update applied for order {order_id}."
                     )
+                    if action_performed:
+                        updated_order = await db.products.find_one({"order_id": order_id})
+                        if updated_order:
+                            await send_order_email_notification(
+                                event="packed",
+                                order=updated_order,
+                            )
                     # Update context
                     if action_performed:
                         ctx_manager.update_context(actor_name, {
@@ -379,6 +412,13 @@ async def process_voice_command(
                         if action_performed
                         else f"ஆர்டர் {order_id} க்கு எந்த அப்டேட்டும் செய்யப்படவில்லை.\nNo update applied for order {order_id}."
                     )
+                    if action_performed:
+                        updated_order = await db.products.find_one({"order_id": order_id})
+                        if updated_order:
+                            await send_order_email_notification(
+                                event="delivered",
+                                order=updated_order,
+                            )
                     # Update context
                     if action_performed:
                         ctx_manager.update_context(actor_name, {
@@ -429,18 +469,34 @@ async def process_voice_command(
                         context_updated = True
 
         elif intent == "show_pending_orders":
-            filters = {"status": "created"}
             if user_role == "warehouse":
-                filters["warehouse_assigned"] = actor_name
+                filters = {
+                    "status": {"$in": ["created", "picked"]},
+                    "warehouse_assigned": actor_name,
+                }
             elif user_role == "delivery":
-                filters["delivery_person_assigned"] = actor_name
-                filters["status"] = {"$in": ["packed", "out_for_delivery"]}
+                filters = {
+                    "delivery_person_assigned": actor_name,
+                    "status": {"$in": ["packed", "out_for_delivery"]},
+                }
+            elif user_role == "dispatcher":
+                filters = {"status": {"$in": ["created", "picked", "packed"]}}
+            else:  # admin sees everything non-delivered
+                filters = {"status": {"$nin": ["delivered", "cancelled", "returned"]}}
 
             pending_orders = await db.products.find(filters).to_list(length=1000)
             if not pending_orders:
-                response = "There are no pending orders right now."
+                response = (
+                    "நிலுவையில் உள்ள ஆர்டர்கள் எதுவும் இல்லை இப்போது.\n"
+                    "There are no pending orders right now."
+                )
             else:
-                response = f"There are {len(pending_orders)} pending orders."
+                order_ids = ", ".join(o["order_id"] for o in pending_orders[:10])
+                more = f" (+{len(pending_orders) - 10} more)" if len(pending_orders) > 10 else ""
+                response = (
+                    f"{len(pending_orders)} நிலுவையில் உள்ள ஆர்டர்கள்: {order_ids}{more}.\n"
+                    f"You have {len(pending_orders)} pending order(s): {order_ids}{more}."
+                )
         
         # Phase 2: New intent handlers for context-aware commands
         elif intent == "mark_in_transit":
@@ -544,7 +600,12 @@ async def process_voice_command(
                             context_updated = True
 
         else:
-            response = "Sorry, I could not map that command to a supported workflow."
+            response = (
+                "அந்த கமாண்டை புரிந்துகொள்ள முடியவில்லை. "
+                "'show pending orders', 'track order ORD-1001', 'mark ORD-1001 as packed' போன்று சொல்லுங்க.\n"
+                "I did not understand that command. "
+                "Try saying: 'show pending orders', 'track order ORD-1001', or 'mark ORD-1001 as packed'."
+            )
 
         await _save_voice_log(
             user_name=actor_name,

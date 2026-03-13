@@ -102,6 +102,8 @@ function VoicePanel({
 }) {
   const recognitionRef = useRef(null);
   const pendingSpeechRef = useRef("");
+  const speechQueueRef = useRef(Promise.resolve());
+  const activeAudioRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -111,23 +113,34 @@ function VoicePanel({
   const [voiceLanguage, setVoiceLanguage] = useState("en-IN");
   const [voicesLoaded, setVoicesLoaded] = useState(false);
 
+  const enqueueSpeech = (task) => {
+    speechQueueRef.current = speechQueueRef.current
+      .then(() => task())
+      .catch(() => undefined);
+    return speechQueueRef.current;
+  };
+
   const playAudioBlob = (blob) =>
     new Promise((resolve, reject) => {
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
+      activeAudioRef.current = audio;
 
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
+        activeAudioRef.current = null;
         resolve();
       };
 
       audio.onerror = () => {
         URL.revokeObjectURL(audioUrl);
+        activeAudioRef.current = null;
         reject(new Error("Failed to play audio"));
       };
 
       audio.play().catch((error) => {
         URL.revokeObjectURL(audioUrl);
+        activeAudioRef.current = null;
         reject(error);
       });
     });
@@ -136,6 +149,13 @@ function VoicePanel({
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+      }
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
     };
   }, []);
@@ -280,9 +300,13 @@ function VoicePanel({
       setResponseText(response);
 
       if (source === "voice") {
-        pendingSpeechRef.current = response;
+        if (recognitionRef.current) {
+          pendingSpeechRef.current = response;
+        } else {
+          void enqueueSpeech(() => speak(response));
+        }
       } else {
-        void speak(response);
+        void enqueueSpeech(() => speak(response));
       }
     } catch {
       const errorMessage =
@@ -290,9 +314,13 @@ function VoicePanel({
       setResponseText(errorMessage);
 
       if (source === "voice") {
-        pendingSpeechRef.current = errorMessage;
+        if (recognitionRef.current) {
+          pendingSpeechRef.current = errorMessage;
+        } else {
+          void enqueueSpeech(() => speak(errorMessage));
+        }
       } else {
-        void speak(errorMessage);
+        void enqueueSpeech(() => speak(errorMessage));
       }
     } finally {
       setIsProcessing(false);
@@ -317,7 +345,7 @@ function VoicePanel({
       const unsupportedMessage =
         "Speech recognition is not supported in this browser. Use manual command input below.";
       setResponseText(unsupportedMessage);
-      void speak(unsupportedMessage);
+      void enqueueSpeech(() => speak(unsupportedMessage));
       return;
     }
 
@@ -384,7 +412,7 @@ function VoicePanel({
         const speechText = pendingSpeechRef.current;
         pendingSpeechRef.current = "";
         setTimeout(() => {
-          void speak(speechText);
+          void enqueueSpeech(() => speak(speechText));
         }, 120);
       }
     };

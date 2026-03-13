@@ -172,6 +172,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
     warehouse: "",
     deliveryPerson: "",
     deliveryPersonPhone: "",
+    deliveryPersonEmail: "",
     sourceLocation: "",
   });
 
@@ -216,6 +217,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
         deliveryPersonPhone: normalizePhoneNumber(
           product.delivery_person_phone,
         ),
+        deliveryPersonEmail: product.delivery_person_email || "",
         sourceLocation: product.source_location,
         deliveryStartLocation: product.delivery_start_location,
         specialInstructions: product.special_instructions,
@@ -321,6 +323,12 @@ function AdminDashboard({ theme, onToggleTheme }) {
       return;
     }
 
+    const emailTrimmed = formData.deliveryPersonEmail.trim();
+    if (emailTrimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/admin/dashboard/add-product`,
@@ -336,6 +344,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
             warehouse_assigned: payload.warehouse,
             delivery_person_assigned: payload.deliveryPerson,
             delivery_person_phone: payload.deliveryPersonPhone,
+            delivery_person_email: formData.deliveryPersonEmail.trim() || undefined,
             source_location: payload.sourceLocation,
           }),
         },
@@ -353,6 +362,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
         warehouse: "",
         deliveryPerson: "",
         deliveryPersonPhone: "",
+        deliveryPersonEmail: "",
         sourceLocation: "",
       });
       toast.success("Product added successfully");
@@ -433,6 +443,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
         deliveryPersonPhone: normalizePhoneNumber(
           updated.delivery_person_phone,
         ),
+        deliveryPersonEmail: updated.delivery_person_email || "",
         sourceLocation: updated.source_location,
         deliveryStartLocation: updated.delivery_start_location,
         specialInstructions: updated.special_instructions,
@@ -488,6 +499,7 @@ function AdminDashboard({ theme, onToggleTheme }) {
       "warehouse_assigned",
       "delivery_person_assigned",
       "delivery_person_phone",
+      "delivery_person_email",
       "status",
       "created_at",
       "updated_at",
@@ -568,6 +580,14 @@ function AdminDashboard({ theme, onToggleTheme }) {
             name="deliveryPersonPhone"
             placeholder="Delivery Person Phone Number (+91 98765 43210)"
             value={formData.deliveryPersonPhone}
+            onChange={handleChange}
+            className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
+          />
+          <input
+            type="email"
+            name="deliveryPersonEmail"
+            placeholder="Delivery Person Email Address"
+            value={formData.deliveryPersonEmail}
             onChange={handleChange}
             className="rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-800"
           />
@@ -743,6 +763,14 @@ function AdminDashboard({ theme, onToggleTheme }) {
                 </p>
                 <p className="mt-1 font-medium">
                   {formatDetailValue(selectedOrder.deliveryPersonPhone)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Delivery Person Email
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDetailValue(selectedOrder.deliveryPersonEmail)}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">

@@ -22,17 +22,11 @@ const parseCoordinates = (value) => {
   return { lat, lon };
 };
 
-const buildOsmEmbedUrl = ({ lat, lon }) => {
-  const delta = 0.01;
-  const left = lon - delta;
-  const right = lon + delta;
-  const top = lat + delta;
-  const bottom = lat - delta;
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${lat}%2C${lon}`;
-};
+const buildMapEmbedUrl = ({ lat, lon }) =>
+  `https://www.google.com/maps?output=embed&q=${lat},${lon}&z=15&hl=en`;
 
 const buildGoogleMapsUrl = ({ lat, lon }) =>
-  `https://www.google.com/maps?q=${lat},${lon}`;
+  `https://www.google.com/maps?q=${lat},${lon}&hl=en`;
 
 function DeliveryRoute({ theme, onToggleTheme }) {
   const navItems = [
@@ -173,7 +167,7 @@ function DeliveryRoute({ theme, onToggleTheme }) {
                 <div className="mt-3 overflow-hidden rounded-xl border border-slate-700">
                   <iframe
                     title="Customer GPS Map"
-                    src={buildOsmEmbedUrl(customerCoords)}
+                    src={buildMapEmbedUrl(customerCoords)}
                     className="h-80 w-full"
                     loading="lazy"
                   />
