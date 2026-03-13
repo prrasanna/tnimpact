@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException
 import schemas
 from auth import require_role
 from database import get_database
-from notifications import send_order_lifecycle_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +29,6 @@ async def _create_product(payload: schemas.ProductCreate) -> dict:
         "warehouse_assigned": payload.warehouse_assigned,
         "delivery_person_assigned": payload.delivery_person_assigned,
         "delivery_person_phone": payload.delivery_person_phone,
-        "customer_name": payload.customer_name,
-        "customer_phone": payload.customer_phone,
-        "customer_email": payload.customer_email,
         "source_location": payload.source_location,
         "delivery_start_location": "",
         "delivery_started_at": None,
@@ -49,8 +45,6 @@ async def _create_product(payload: schemas.ProductCreate) -> dict:
     product_data["_id"] = str(result.inserted_id)
 
     logger.info("Admin added product %s", product_data["order_id"])
-
-    await send_order_lifecycle_notifications(event="created", order=product_data)
 
     return product_data
 
