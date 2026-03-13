@@ -1,10 +1,16 @@
-"""Email notifications for order lifecycle events."""
+"""Email and SMS notifications for order lifecycle events."""
 
 import asyncio
 import logging
 import os
 import smtplib
+import re
+from pathlib import Path
 from email.message import EmailMessage
+
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path(__file__).with_name(".env"), override=False)
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +24,22 @@ def _smtp_enabled() -> bool:
     }
 
 
+def _twilio_enabled() -> bool:
+    return os.getenv("TWILIO_SMS_ENABLED", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _build_subject(event: str, order_id: str) -> str:
     if event == "created":
         return f"Order Assigned: {order_id}"
     if event == "packed":
         return f"Order Packed: {order_id}"
+    if event == "out_for_delivery":
+        return f"Order Out for Delivery: {order_id}"
     if event == "delivered":
         return f"Order Delivered: {order_id}"
     return f"Order Update: {order_id}"
@@ -38,6 +55,8 @@ def _build_body(event: str, order: dict) -> str:
         headline = "A new order has been assigned to you."
     elif event == "packed":
         headline = "Your assigned order has been packed and is ready for delivery handoff."
+    elif event == "out_for_delivery":
+        headline = "Your assigned order is out for delivery."
     elif event == "delivered":
         headline = "Your assigned order has been marked as delivered."
     else:
@@ -98,6 +117,79 @@ def _send_email_sync(to_email: str, subject: str, body: str) -> None:
         smtp.send_message(message)
 
 
+def _normalize_phone_number(phone: str) -> str:
+    """Normalize customer phone numbers to E.164-like format for Twilio."""
+    raw = (phone or "").strip()
+    if not raw:
+        return ""
+
+    if raw.startswith("00"):
+        raw = "+" + raw[2:]
+
+    if raw.startswith("+"):
+        return "+" + re.sub(r"\D", "", raw)
+
+    digits = re.sub(r"\D", "", raw)
+    if not digits:
+        return ""
+
+    # Default to India if only local 10-digit phone is provided.
+    if len(digits) == 10:
+        return f"+91{digits}"
+
+    if digits.startswith("91") and len(digits) == 12:
+        return f"+{digits}"
+
+    return f"+{digits}"
+
+
+def _build_sms_body(event: str, order: dict) -> str:
+    order_id = order.get("order_id", "Unknown")
+    item = order.get("product_name", "Product")
+    destination = order.get("destination", "your location")
+
+    if event == "created":
+        return f"Order {order_id} for {item} has been created and assigned for delivery to {destination}."
+    if event == "packed":
+        return f"Order {order_id} for {item} has been packed and is ready for dispatch."
+    if event == "out_for_delivery":
+        return f"Order {order_id} is out for delivery to {destination}."
+    if event == "delivered":
+        return f"Order {order_id} has been delivered. Thank you for choosing us."
+    return f"Order {order_id} status updated to {order.get('status', event)}."
+
+
+def _send_sms_sync(to_phone: str, body: str) -> None:
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
+    from_number = os.getenv("TWILIO_FROM_NUMBER", "").strip()
+    service_sid = os.getenv("TWILIO_MESSAGING_SERVICE_SID", "").strip()
+
+    if not account_sid or not auth_token:
+        raise RuntimeError("Twilio is enabled but TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN is missing")
+    if not from_number and not service_sid:
+        raise RuntimeError(
+            "Twilio is enabled but TWILIO_FROM_NUMBER or TWILIO_MESSAGING_SERVICE_SID is missing"
+        )
+
+    try:
+        from twilio.rest import Client
+    except ImportError as exc:
+        raise RuntimeError("twilio package is not installed") from exc
+
+    client = Client(account_sid, auth_token)
+    message_kwargs = {
+        "body": body,
+        "to": to_phone,
+    }
+    if service_sid:
+        message_kwargs["messaging_service_sid"] = service_sid
+    else:
+        message_kwargs["from_"] = from_number
+
+    client.messages.create(**message_kwargs)
+
+
 async def send_order_email_notification(event: str, order: dict) -> bool:
     """Send lifecycle email to customer email if SMTP is configured.
 
@@ -129,3 +221,41 @@ async def send_order_email_notification(event: str, order: dict) -> bool:
             exc,
         )
         return False
+
+
+async def send_order_sms_notification(event: str, order: dict) -> bool:
+    """Send lifecycle SMS to customer phone if Twilio is configured."""
+    order_id = order.get("order_id", "Unknown")
+    customer_phone = _normalize_phone_number(order.get("customer_phone", ""))
+
+    if not customer_phone:
+        logger.info("SMS notification skipped for %s: no customer_phone", order_id)
+        return False
+
+    if not _twilio_enabled():
+        logger.info("SMS notification skipped for %s: TWILIO_SMS_ENABLED is false", order_id)
+        return False
+
+    body = _build_sms_body(event=event, order=order)
+
+    try:
+        await asyncio.to_thread(_send_sms_sync, customer_phone, body)
+        logger.info("SMS notification sent for %s (%s)", order_id, event)
+        return True
+    except Exception as exc:
+        logger.warning(
+            "SMS notification failed for %s (%s): %s",
+            order_id,
+            event,
+            exc,
+        )
+        return False
+
+
+async def send_order_lifecycle_notifications(event: str, order: dict) -> dict:
+    """Send both email and SMS notifications for an order lifecycle event."""
+    email_sent, sms_sent = await asyncio.gather(
+        send_order_email_notification(event=event, order=order),
+        send_order_sms_notification(event=event, order=order),
+    )
+    return {"email_sent": email_sent, "sms_sent": sms_sent}

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import schemas
 from auth import require_role
 from database import get_database
-from notifications import send_order_email_notification
+from notifications import send_order_lifecycle_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ async def _create_product(payload: schemas.ProductCreate) -> dict:
 
     logger.info("Admin added product %s", product_data["order_id"])
 
-    await send_order_email_notification(event="created", order=product_data)
+    await send_order_lifecycle_notifications(event="created", order=product_data)
 
     return product_data
 

@@ -15,7 +15,7 @@ from gtts import gTTS
 
 from context_manager import get_context_manager
 from database import get_database
-from notifications import send_order_email_notification
+from notifications import send_order_lifecycle_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -372,7 +372,7 @@ async def process_voice_command(
                     if action_performed:
                         updated_order = await db.products.find_one({"order_id": order_id})
                         if updated_order:
-                            await send_order_email_notification(
+                            await send_order_lifecycle_notifications(
                                 event="packed",
                                 order=updated_order,
                             )
@@ -415,7 +415,7 @@ async def process_voice_command(
                     if action_performed:
                         updated_order = await db.products.find_one({"order_id": order_id})
                         if updated_order:
-                            await send_order_email_notification(
+                            await send_order_lifecycle_notifications(
                                 event="delivered",
                                 order=updated_order,
                             )
@@ -459,6 +459,13 @@ async def process_voice_command(
                         if action_performed
                         else f"ஆர்டர் {order_id} க்கு எந்த அப்டேட்டும் செய்யப்படவில்லை.\nNo update applied for order {order_id}."
                     )
+                    if action_performed:
+                        updated_order = await db.products.find_one({"order_id": order_id})
+                        if updated_order:
+                            await send_order_lifecycle_notifications(
+                                event="out_for_delivery",
+                                order=updated_order,
+                            )
                     # Update context
                     if action_performed:
                         ctx_manager.update_context(actor_name, {

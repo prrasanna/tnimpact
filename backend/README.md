@@ -90,9 +90,18 @@ SMTP_FROM_EMAIL=
 SMTP_FROM_NAME=Logistics Assistant
 SMTP_USE_TLS=true
 SMTP_USE_SSL=false
+
+# SMS notifications (optional, Twilio)
+TWILIO_SMS_ENABLED=true
+TWILIO_ACCOUNT_SID=AC563483ed3acf53ce380a73775882610d
+TWILIO_AUTH_TOKEN=e7bf1cffa5e4633fd18a41d9c3525348
+# Set one of the following:
+TWILIO_FROM_NUMBER=+16367472395
+TWILIO_MESSAGING_SERVICE_SID=
 ```
 
 Set `SMTP_ENABLED=true` after filling valid SMTP credentials to send delivery-person emails on order created, packed, and delivered events.
+Set `TWILIO_SMS_ENABLED=true` after filling valid Twilio credentials to send customer SMS on order `created`, `packed`, `out_for_delivery`, and `delivered` events.
 
 ### 4. Test MongoDB Connection
 
@@ -177,7 +186,11 @@ curl -X POST http://127.0.0.1:8000/admin/add-product \
     "product_name":"Medical Kit",
     "destination":"Chennai",
     "warehouse_assigned":"Warehouse One",
-    "delivery_person_assigned":"Delivery One"
+    "delivery_person_assigned":"Delivery One",
+    "delivery_person_phone":"+919999999999",
+    "customer_name":"Ravi Kumar",
+    "customer_phone":"+919876543210",
+    "customer_email":"ravi@example.com"
   }'
 ```
 
