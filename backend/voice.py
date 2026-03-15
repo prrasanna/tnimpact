@@ -176,8 +176,31 @@ def _intent_from_text(normalized_command: str) -> str:
     ]):
         return "show_pending_orders"
 
-    # Location queries (Phase 2) — check before mark block
-    if ("what" in normalized_command or "where" in normalized_command) and ("location" in normalized_command or "headed" in normalized_command):
+    # Next delivery location queries
+    if any(phrase in normalized_command for phrase in [
+        "next delivery location",
+        "next location",
+        "location of next delivery",
+        "where is my next delivery",
+        "my next delivery location",
+        "adutha delivery location",
+    ]):
+        return "query_next_location"
+
+    # Location queries (Phase 2) — support both question forms and compact forms like "ORD-1002 location"
+    has_order_reference = bool(
+        re.search(r"(ord\s*-?\s*\d+|\b\d{2,}\b)", normalized_command, flags=re.IGNORECASE)
+    )
+    if (
+        "location" in normalized_command
+        and (
+            "what" in normalized_command
+            or "where" in normalized_command
+            or "headed" in normalized_command
+            or "destination" in normalized_command
+            or has_order_reference
+        )
+    ):
         return "query_location"
 
     # Update location (Phase 2) — check before mark block
@@ -563,6 +586,43 @@ async def process_voice_command(
                         else f"No update applied for order {order_id}."
                     )
         
+        elif intent == "query_next_location":
+            if user_role == "delivery":
+                filters = {
+                    "delivery_person_assigned": actor_name,
+                    "status": {"$in": ["packed", "out_for_delivery"]},
+                }
+            elif user_role == "warehouse":
+                filters = {
+                    "warehouse_assigned": actor_name,
+                    "status": {"$in": ["created", "picked"]},
+                }
+            elif user_role == "dispatcher":
+                filters = {"status": {"$in": ["created", "picked", "packed", "out_for_delivery"]}}
+            else:
+                filters = {"status": {"$nin": ["delivered", "cancelled", "returned"]}}
+
+            next_order = await db.products.find_one(filters, sort=[("created_at", 1)])
+            if not next_order:
+                response = (
+                    "இப்போ உங்களுக்கு active delivery location இல்லை.\n"
+                    "You do not have an active next delivery location right now."
+                )
+            else:
+                next_order_id = next_order.get("order_id", "Unknown")
+                next_location = next_order.get("destination", "unknown location")
+                response = (
+                    f"உங்க அடுத்த delivery order {next_order_id}, location {next_location}.\n"
+                    f"Your next delivery is order {next_order_id}, location {next_location}."
+                )
+
+                ctx_manager.update_context(actor_name, {
+                    "last_order_id": next_order_id,
+                    "last_location": next_location,
+                    "next_delivery_location": next_location,
+                })
+                context_updated = True
+
         elif intent == "query_location":
             if not order_id:
                 response = "I could not find an order ID. Please track an order first."
@@ -573,6 +633,12 @@ async def process_voice_command(
                 else:
                     location = order.get("destination", "unknown location")
                     response = f"Order {order_id} is headed to {location}."
+
+                    ctx_manager.update_context(actor_name, {
+                        "last_order_id": order_id,
+                        "last_location": location,
+                    })
+                    context_updated = True
         
         elif intent == "update_location":
             if user_role not in {"delivery", "admin"}:
