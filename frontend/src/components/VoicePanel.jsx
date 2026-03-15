@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AudioLines, Mic, SendHorizontal } from "lucide-react";
+import { voiceAPI } from "../utils/api";
 
 // Reusable functional voice assistant panel UI.
 function VoicePanel({
@@ -10,6 +11,7 @@ function VoicePanel({
 }) {
   const recognitionRef = useRef(null);
   const pendingSpeechRef = useRef("");
+  const audioRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -23,8 +25,17 @@ function VoicePanel({
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
     };
   }, []);
+
+  const hasTamilText = (text) => /[\u0B80-\u0BFF]/.test(text || "");
+
+  const toTtsLanguage = (lang) =>
+    (lang || "").toLowerCase().startsWith("ta") ? "ta" : "en";
 
   const pickBestVoice = (lang) => {
     const voices = window.speechSynthesis?.getVoices?.() || [];
@@ -40,54 +51,137 @@ function VoicePanel({
     }
 
     const base = lang.split("-")[0].toLowerCase();
-    return (
-      voices.find((voice) => voice.lang?.toLowerCase().startsWith(base)) ||
-      voices[0]
+    const sameLanguage = voices.find((voice) =>
+      voice.lang?.toLowerCase().startsWith(base),
     );
-  };
 
-  const speak = (text) => {
-    if (!window.speechSynthesis) {
-      return;
+    if (sameLanguage) {
+      return sameLanguage;
     }
 
-    const [taLine, enLine] = text
+    // Never fallback Tamil to an unrelated voice.
+    if (base === "ta") {
+      return null;
+    }
+
+    return voices[0] || null;
+  };
+
+  const splitBilingualText = (text) => {
+    const lines = (text || "")
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
 
-    window.speechSynthesis.cancel();
+    if (lines.length >= 2) {
+      return {
+        taLine: lines.find((line) => hasTamilText(line)) || "",
+        enLine: lines.find((line) => !hasTamilText(line)) || "",
+      };
+    }
 
-    if (taLine && enLine) {
-      const taUtterance = new SpeechSynthesisUtterance(taLine);
-      taUtterance.lang = "ta-IN";
+    if (!hasTamilText(text)) {
+      return { taLine: "", enLine: "" };
+    }
+
+    const sentences = text
+      .split(/(?<=[.!?])\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    return {
+      taLine: sentences.filter((line) => hasTamilText(line)).join(" "),
+      enLine: sentences.filter((line) => !hasTamilText(line)).join(" "),
+    };
+  };
+
+  const speakWithBrowserVoice = (text, lang) =>
+    new Promise((resolve) => {
+      if (!window.speechSynthesis) {
+        resolve(false);
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      const selectedVoice = pickBestVoice(lang);
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+
+      utterance.onend = () => resolve(true);
+      utterance.onerror = () => resolve(false);
+      window.speechSynthesis.speak(utterance);
+    });
+
+  const speakWithServerTts = async (text, language) => {
+    const blob = await voiceAPI.synthesizeSpeech({
+      command: text,
+      language: toTtsLanguage(language),
+    });
+
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(objectUrl);
+      audioRef.current = audio;
+
+      await new Promise((resolve, reject) => {
+        audio.onended = resolve;
+        audio.onerror = reject;
+        audio.play().catch(reject);
+      });
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      if (audioRef.current?.src === objectUrl) {
+        audioRef.current = null;
+      }
+    }
+  };
+
+  const speak = async (text) => {
+    const { taLine, enLine } = splitBilingualText(text);
+
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    if (taLine) {
       const taVoice = pickBestVoice("ta-IN");
       if (taVoice) {
-        taUtterance.voice = taVoice;
+        const tamilSpoken = await speakWithBrowserVoice(taLine, "ta-IN");
+        if (!tamilSpoken) {
+          await speakWithServerTts(taLine, "ta");
+        }
+      } else {
+        await speakWithServerTts(taLine, "ta");
       }
 
-      const enUtterance = new SpeechSynthesisUtterance(enLine);
-      enUtterance.lang = "en-IN";
-      const enVoice = pickBestVoice("en-IN");
-      if (enVoice) {
-        enUtterance.voice = enVoice;
+      if (enLine) {
+        const englishSpoken = await speakWithBrowserVoice(enLine, "en-IN");
+        if (!englishSpoken) {
+          await speakWithServerTts(enLine, "en");
+        }
       }
-
-      taUtterance.onend = () => {
-        window.speechSynthesis.speak(enUtterance);
-      };
-
-      window.speechSynthesis.speak(taUtterance);
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = voiceLanguage;
-    const selectedVoice = pickBestVoice(voiceLanguage);
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
+    const preferredVoice = pickBestVoice(voiceLanguage);
+    const requiresTamilFallback =
+      toTtsLanguage(voiceLanguage) === "ta" && !preferredVoice;
+
+    if (requiresTamilFallback || !window.speechSynthesis) {
+      await speakWithServerTts(text, voiceLanguage);
+      return;
     }
-    window.speechSynthesis.speak(utterance);
+
+    const spoken = await speakWithBrowserVoice(text, voiceLanguage);
+    if (!spoken) {
+      await speakWithServerTts(text, voiceLanguage);
+    }
   };
 
   const processCommand = async (command, source = "manual") => {
@@ -110,7 +204,7 @@ function VoicePanel({
       if (source === "voice") {
         pendingSpeechRef.current = response;
       } else {
-        speak(response);
+        await speak(response);
       }
     } catch {
       const errorMessage =
@@ -120,7 +214,7 @@ function VoicePanel({
       if (source === "voice") {
         pendingSpeechRef.current = errorMessage;
       } else {
-        speak(errorMessage);
+        await speak(errorMessage);
       }
     } finally {
       setIsProcessing(false);
@@ -145,7 +239,9 @@ function VoicePanel({
       const unsupportedMessage =
         "Speech recognition is not supported in this browser. Use manual command input below.";
       setResponseText(unsupportedMessage);
-      speak(unsupportedMessage);
+      speak(unsupportedMessage).catch(() => {
+        setResponseText(unsupportedMessage);
+      });
       return;
     }
 
@@ -191,7 +287,9 @@ function VoicePanel({
         const speechText = pendingSpeechRef.current;
         pendingSpeechRef.current = "";
         setTimeout(() => {
-          speak(speechText);
+          speak(speechText).catch(() => {
+            setResponseText("Unable to play voice response. Please retry.");
+          });
         }, 120);
       }
     };
