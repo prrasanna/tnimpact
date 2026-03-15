@@ -248,9 +248,6 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
                 Delivery Person Phone Number
               </th>
               <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
-                Destination
-              </th>
-              <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
                 Status
               </th>
               <th className="px-4 py-3 text-left uppercase tracking-wide text-slate-400">
@@ -275,9 +272,6 @@ function WarehouseDashboard({ theme, onToggleTheme }) {
                   </td>
                   <td className="px-4 py-3 text-slate-200">
                     {order.delivery_person_phone || "-"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-200">
-                    {order.destination || "-"}
                   </td>
                   <td className="px-4 py-3">
                     <span
